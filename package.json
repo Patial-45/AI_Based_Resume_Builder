@@ -1,0 +1,21 @@
+{
+  "name": "resume-builder",
+  "version": "1.0.0",
+  "description": "AI-Powered Resume Builder with Job Matching",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build:client": "cd client && npm run build",
+    "start:server": "cd server && npm start"
+  },
+  "keywords": [
+    "resume",
+    "job-matching",
+    "ai",
+    "mern"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+
