@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { FiFileText, FiZap, FiDownload, FiSave, FiCheck, FiX, FiEdit2 } from 'react-icons/fi';
+import { FiFileText, FiZap, FiDownload } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { Card, CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -64,7 +64,7 @@ const ResumeBuilder = () => {
   const [generatedResume, setGeneratedResume] = useState<ATSResume | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
-  const [editingSection, setEditingSection] = useState<string | null>(null);
+
 
   useEffect(() => {
     fetchData();

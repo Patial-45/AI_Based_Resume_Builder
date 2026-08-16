@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { FiSearch, FiTrendingUp, FiCheckCircle, FiXCircle, FiAlertCircle, FiFileText, FiTarget, FiArrowUp, FiClock, FiEdit3, FiCopy } from 'react-icons/fi';
+import { FiSearch, FiTrendingUp, FiCheckCircle, FiXCircle, FiAlertCircle, FiFileText, FiTarget } from 'react-icons/fi';
+
 import toast from 'react-hot-toast';
 import { Card, CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';

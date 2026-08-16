@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { FiBriefcase, FiMapPin, FiExternalLink, FiStar, FiCheck, FiX, FiSearch, FiLoader } from 'react-icons/fi';
+import { FiBriefcase, FiMapPin, FiExternalLink, FiStar, FiCheck, FiSearch } from 'react-icons/fi';
+
 import toast from 'react-hot-toast';
 import { Card, CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';

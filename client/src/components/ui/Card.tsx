@@ -1,10 +1,11 @@
-import { ReactNode } from 'react';
+import type { ReactNode, CSSProperties } from 'react';
 
 interface CardProps {
   children: ReactNode;
   className?: string;
   hover?: boolean;
   onClick?: () => void;
+  style?: CSSProperties;
 }
 
 interface CardHeaderProps {
@@ -22,17 +23,19 @@ interface CardFooterProps {
   className?: string;
 }
 
-export const Card = ({ children, className = '', hover = false, onClick }: CardProps) => {
+export const Card = ({ children, className = '', hover = false, onClick, style }: CardProps) => {
   const hoverClasses = hover ? 'hover-lift cursor-pointer' : '';
   return (
     <div
       className={`card ${hoverClasses} ${className}`}
       onClick={onClick}
+      style={style}
     >
       {children}
     </div>
   );
 };
+
 
 export const CardHeader = ({ children, className = '' }: CardHeaderProps) => {
   return <div className={`card-header ${className}`}>{children}</div>;

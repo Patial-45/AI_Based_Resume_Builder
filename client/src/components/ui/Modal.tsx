@@ -1,5 +1,6 @@
-import { ReactNode, useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { FiX } from 'react-icons/fi';
+
 
 interface ModalProps {
   isOpen: boolean;

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { FiTrendingUp, FiFileText, FiCalendar, FiChevronRight, FiClock } from 'react-icons/fi';
+import { FiTrendingUp, FiFileText, FiChevronRight, FiClock } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { Card, CardBody } from '../components/ui/Card';
-import Badge from '../components/ui/Badge';
 import Skeleton from '../components/ui/Skeleton';
+
 import ProgressBar from '../components/ui/ProgressBar';
 import Button from '../components/ui/Button';
 
