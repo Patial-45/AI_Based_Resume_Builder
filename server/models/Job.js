@@ -60,9 +60,9 @@ const jobSchema = new mongoose.Schema({
 });
 
 jobSchema.index({ title: 'text', company: 'text', description: 'text' });
-jobSchema.index({ sourceUrl: 1 }, { unique: true });
 jobSchema.index({ postedDate: -1 });
 jobSchema.index({ source: 1, isActive: 1 });
+
 
 const Job = mongoose.model('Job', jobSchema);
 

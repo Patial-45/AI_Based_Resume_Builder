@@ -12,7 +12,10 @@ This document maintains test suite specifications, execution records, automated 
 | **VITE-BUNDLE-02** | Vite Production Asset Bundling | Automated | **PASS** | 2026-08-16 | Generated `dist/index.html`, CSS (40.8KB), JS (335KB) |
 | **API-HEALTH-03** | Express Backend Health Endpoint `/api/health` | Integration | **PASS** | 2026-08-16 | Returns HTTP 200 with env checks & server timestamp |
 | **COMP-TYPE-04** | UI Component Property Mismatches | Automated | **PASS** | 2026-08-16 | Fixed `Badge` secondary variant & `Card` style prop |
+| **MONGOOSE-INDEX-06** | Mongoose Duplicate Index Warning Removal | Code Fix | **PASS** | 2026-08-17 | Removed redundant `sourceUrl` schema index in `Job.js` |
+| **MONGO-CONN-07** | MongoDB DNS SRV `ENOTFOUND` & Local Fallback | Network & Config | **FIXED** | 2026-08-17 | Added 5s timeout, local fallback & detailed DNS troubleshooting |
 | **MANUAL-UX-05** | User End-to-End Manual Acceptance Test | Manual | **PENDING USER** | Pending | Awaiting user testing before UI overhaul (`Design.md`) |
+
 
 ---
 
