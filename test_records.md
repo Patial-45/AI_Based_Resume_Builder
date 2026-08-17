@@ -14,7 +14,9 @@ This document maintains test suite specifications, execution records, automated 
 | **COMP-TYPE-04** | UI Component Property Mismatches | Automated | **PASS** | 2026-08-16 | Fixed `Badge` secondary variant & `Card` style prop |
 | **MONGOOSE-INDEX-06** | Mongoose Duplicate Index Warning Removal | Code Fix | **PASS** | 2026-08-17 | Removed redundant `sourceUrl` schema index in `Job.js` |
 | **MONGO-CONN-07** | MongoDB DNS SRV `ENOTFOUND` & Local Fallback | Network & Config | **FIXED** | 2026-08-17 | Added 5s timeout, local fallback & detailed DNS troubleshooting |
+| **AUTH-CORS-08** | Dynamic CORS Origin & Auth Network Error Resolution | Config & CORS | **FIXED** | 2026-08-17 | Updated server CORS to allow dev origins (`5173`, `5174`, `3000`) dynamically |
 | **MANUAL-UX-05** | User End-to-End Manual Acceptance Test | Manual | **PENDING USER** | Pending | Awaiting user testing before UI overhaul (`Design.md`) |
+
 
 
 ---
