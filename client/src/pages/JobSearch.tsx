@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { useState, useEffect, useCallback } from 'react';
+import { api, errorMessage, isUnauthorized } from '../services/api';
 import { FiBriefcase, FiMapPin, FiExternalLink, FiStar, FiCheck, FiSearch } from 'react-icons/fi';
 
 import toast from 'react-hot-toast';
@@ -55,16 +55,21 @@ const JobSearch = () => {
   const fetchResumes = async () => {
     try {
       const response = await api.get('/resumes');
-      setResumes(response.data);
-      if (response.data.length > 0) {
-        setSelectedResume(response.data[0]._id);
+      const list = Array.isArray(response.data) ? response.data : [];
+      setResumes(list);
+      if (list.length > 0) {
+        setSelectedResume(list[0]._id);
       }
-    } catch (error: any) {
-      toast.error('Failed to load resumes');
+    } catch (error) {
+
+      if (!isUnauthorized(error)) {
+        toast.error('Could not load resumes. Please upload a resume first.');
+      }
     } finally {
       setLoadingResumes(false);
     }
   };
+
 
   const handleScanJobs = async () => {
     if (!selectedResume) {
@@ -83,44 +88,44 @@ const JobSearch = () => {
         toast.success(`Found ${response.data.jobs.length} jobs!`);
       }
       fetchRecommendedJobs();
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.message || 'Job scanning failed';
+    } catch (error) {
+
+      const errorMsg = errorMessage(error, 'Job scanning failed. Please try again.');
       toast.error(errorMsg);
-      // If it's just "no jobs found", try to fetch existing jobs
-      if (error.response?.status === 404) {
-        fetchRecommendedJobs();
-      }
+      // Fetch existing recommended jobs as fallback
+      fetchRecommendedJobs();
     } finally {
       setScanning(false);
     }
+
   };
 
-  const fetchRecommendedJobs = async () => {
+  const fetchRecommendedJobs = useCallback(async () => {
     if (!selectedResume) return;
 
     setLoading(true);
     try {
       const response = await api.get(`/jobs/recommended?resumeId=${selectedResume}&limit=20`);
       setJobs(response.data);
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to load recommended jobs');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedResume]);
 
   useEffect(() => {
     if (selectedResume) {
       fetchRecommendedJobs();
     }
-  }, [selectedResume]);
+  }, [selectedResume, fetchRecommendedJobs]);
 
   const handleSaveJob = async (jobId: string) => {
     try {
       await api.post(`/jobs/${jobId}/save`);
       toast.success('Job saved!');
       fetchRecommendedJobs();
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to save job');
     }
   };
@@ -130,7 +135,7 @@ const JobSearch = () => {
       await api.post(`/jobs/${jobId}/apply`);
       toast.success('Marked as applied!');
       fetchRecommendedJobs();
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to mark as applied');
     }
   };
@@ -248,8 +253,8 @@ const JobSearch = () => {
                             <FiMapPin className="mr-1.5" />
                             {jobMatch.jobId.remote ? 'Remote' : jobMatch.jobId.location || 'Not specified'}
                           </span>
-                          <Badge 
-                            variant={jobMatch.jobId.source === 'sample' ? 'warning' : 'primary'} 
+                          <Badge
+                            variant={jobMatch.jobId.source === 'sample' ? 'warning' : 'primary'}
                             className="capitalize"
                           >
                             {jobMatch.jobId.source === 'sample' ? 'Sample Job' : jobMatch.jobId.source}

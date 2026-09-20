@@ -11,10 +11,7 @@ const resumeSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  filePath: {
-    type: String,
-    required: true
-  },
+  filePath: { type: String, required: false },
   fileSize: {
     type: Number,
     required: true
@@ -43,6 +40,15 @@ const resumeSchema = new mongoose.Schema({
     skills: [String],
     certifications: [String]
   },
+  originalName: String,
+  originalData: { type: Buffer, select: false },
+  originalHash: { type: String, select: false },
+  sourceText: { type: String, select: false },
+  revision: { type: Number, default: 0 },
+  reviewStatus: { type: String, enum: ['needs_review', 'ready'], default: 'needs_review' },
+  reviewedAt: Date,
+  deletionRequestedAt: Date,
+  versions: { type: [{ revision: Number, text: String, savedAt: Date, sha256: String }], select: false, default: [] },
   embedding: {
     type: [Number],
     required: false,

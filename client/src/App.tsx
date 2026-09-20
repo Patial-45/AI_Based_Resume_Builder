@@ -3,6 +3,8 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import Navbar from './components/Navbar';
+import { useAuth } from './context/auth';
+import Recover from './pages/Recover';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -13,13 +15,14 @@ import MatchHistory from './pages/MatchHistory';
 import Profile from './pages/Profile';
 import ResumeBuilder from './pages/ResumeBuilder';
 
-function App() {
+function Workspace() {
+  const { user } = useAuth();
   return (
-    <AuthProvider>
-      <div className="min-h-screen">
+      <div className={user ? "app-shell signed-in" : "app-shell"}>
         <Navbar />
-        <main className="container mx-auto px-4 py-8 max-w-7xl">
+        <main id="main-content" tabIndex={-1} className="main-content">
           <Routes>
+            <Route path="/recover" element={<Recover />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route
@@ -78,13 +81,14 @@ function App() {
                 </PrivateRoute>
               }
             />
+            <Route path="*" element={<section className="p-12 text-center"><h1 className="text-3xl font-semibold">Page not found</h1><p className="mt-3">Use the navigation to return to your workspace.</p></section>} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
         <Toaster position="top-right" />
       </div>
-    </AuthProvider>
+
   );
 }
 
-export default App;
+export default function App() { return <AuthProvider><Workspace /></AuthProvider>; }

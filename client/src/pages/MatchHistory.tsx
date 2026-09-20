@@ -41,7 +41,7 @@ const MatchHistory = () => {
     try {
       const response = await api.get('/match');
       setMatches(response.data);
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to load match history');
     } finally {
       setLoading(false);
@@ -156,7 +156,7 @@ const MatchHistory = () => {
                             {match.jobDescriptionId.title}
                           </h3>
                           <p className="text-lg text-gray-600 mb-3">{match.jobDescriptionId.company}</p>
-                          
+
                           <div className="grid grid-cols-3 gap-4 mb-4">
                             <div>
                               <p className="text-xs text-gray-500 mb-1">Semantic</p>

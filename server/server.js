@@ -1,102 +1,31 @@
-// server.js (top)
-import 'dotenv/config'; // <<< MUST be first to load env vars before any other import
-import express from 'express';
+import 'dotenv/config';
 import mongoose from 'mongoose';
-import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { createApp } from './app.js';
+import { loadConfig } from './config/environment.js';
 import connectDB from './config/database.js';
-
-// Import routes
-import authRoutes from './routes/auth.routes.js';
-import resumeRoutes from './routes/resume.routes.js';
-import matchRoutes from './routes/match.routes.js';
-import jobRoutes from './routes/job.routes.js';
-import resumeBuilderRoutes from './routes/resumeBuilder.routes.js';
-
-// dotenv already loaded above, no need to call dotenv.config() here
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const app = express();
-
-// Middleware
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:3000',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:5174'
-].filter(Boolean);
-
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, postman) or any dev origin
-    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
-      return callback(null, true);
-    }
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Log all requests
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
-});
-
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/resumes', resumeRoutes);
-app.use('/api/match', matchRoutes);
-app.use('/api/jobs', jobRoutes);
-app.use('/api/resume-builder', resumeBuilderRoutes);
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    message: 'Server is running',
-    timestamp: new Date().toISOString(),
-    env: {
-      hasJWTSecret: !!process.env.JWT_SECRET,
-      hasMongoURI: !!process.env.MONGODB_URI,
-      nodeEnv: process.env.NODE_ENV
-    }
-  });
-});
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(err.status || 500).json({
-    message: err.message || 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err : {}
-  });
-});
-
-// MongoDB Connection
-connectDB().then(() => {
-  // Start server
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log("OPENAI_API_KEY present:", !!process.env.OPENAI_API_KEY);
-  });
-}).catch((error) => {
-  console.error('❌ Failed to start server:', error);
-  process.exit(1);
-});
-
-export default app;
+import Session from './models/Session.js';
+import RateBucket from './models/RateBucket.js';
+import OperationLease from './models/OperationLease.js';
+import User from './models/User.js';
+import Resume from './models/Resume.js';
+try {
+  const config = loadConfig();
+  await connectDB(config);
+  await Promise.all([User.init(), Session.init(), RateBucket.init(), OperationLease.init(), Resume.init()]);
+  const app = createApp({ config });
+  const server = app.listen(config.port, () => console.log('Resume Builder API listening on port ' + config.port));
+  server.requestTimeout = 120000;
+  server.headersTimeout = 15000;
+  let closing = false;
+  const shutdown = () => {
+    if (closing) return;
+    closing = true;
+    const timer = setTimeout(() => process.exit(1), 15000); timer.unref();
+    server.close(async () => { await mongoose.disconnect(); clearTimeout(timer); process.exit(0); });
+  };
+  process.on('SIGTERM', shutdown); process.on('SIGINT', shutdown);
+} catch {
+  console.error(JSON.stringify({ level: 'error', code: 'STARTUP_FAILED', message: 'Check required configuration and database connectivity.' }));
+  await mongoose.disconnect();
+  process.exitCode = 1;
+}

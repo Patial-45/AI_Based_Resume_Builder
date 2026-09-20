@@ -1,0 +1,36 @@
+{
+  "date": "2026-09-09",
+  "scope": "Offline probes with mocked persistence/filesystem where stated",
+  "results": [
+    {
+      "id": "B01",
+      "status": "REPRODUCED",
+      "detail": "A missing PDF returns successful-looking placeholder text."
+    },
+    {
+      "id": "B03",
+      "status": "REPRODUCED",
+      "detail": "Fallback invents employment/certifications and returns ATS score 88."
+    },
+    {
+      "id": "B06",
+      "status": "REPRODUCED",
+      "detail": "Both live-labelled adapters return fabricated listings without a network request."
+    },
+    {
+      "id": "S01",
+      "status": "REPRODUCED",
+      "detail": "Protected fields reach the update query; deletion uses the supplied path. DB and filesystem operations were mocked."
+    },
+    {
+      "id": "B09",
+      "status": "REPRODUCED",
+      "detail": "Schema confirms three-day Job TTL and one JobMatch per user/job, independent of resume."
+    },
+    {
+      "id": "B02",
+      "status": "REPRODUCED",
+      "detail": "Single-resume lookup does not exclude a soft-deleted resume."
+    }
+  ]
+}

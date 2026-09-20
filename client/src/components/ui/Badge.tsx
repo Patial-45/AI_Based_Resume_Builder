@@ -23,6 +23,3 @@ const Badge = ({ children, variant = 'primary', className = '' }: BadgeProps) =>
 };
 
 export default Badge;
-
-
-

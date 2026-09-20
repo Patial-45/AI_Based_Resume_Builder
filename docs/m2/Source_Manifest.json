@@ -1,0 +1,310 @@
+{
+  "generatedAt": "2026-09-20T16:23:18.705Z",
+  "note": "Uncommitted implementation snapshot including preserved earlier changes. Verification spans full and targeted runs; see Verification.md. No environment secrets or traces included.",
+  "files": [
+    {
+      "path": "client/package-lock.json",
+      "sha256": "96b60a850b3a99236999f0377004e095c08dadca239b7046ba8b20021777f644"
+    },
+    {
+      "path": "client/package.json",
+      "sha256": "434a3c42a8d7a9ef72b555aaf43fde6d95de8d2f26e72754674f618c2076d1fc"
+    },
+    {
+      "path": "client/playwright.config.ts",
+      "sha256": "32f615b04b0f4d78e3e91f6ea6fc547393bfd4c2b5f3f525ded860beff553481"
+    },
+    {
+      "path": "client/src/App.css",
+      "sha256": "a0715e0a09edbd0fbde65816a75e0fa0fc8b314c5260c0768c19bf3aac22621a"
+    },
+    {
+      "path": "client/src/App.tsx",
+      "sha256": "9ffd39b6e50e4e7049cc8a3d81a198e16591599b5156cca94ecdd1f52c0b5293"
+    },
+    {
+      "path": "client/src/components/AuthForm.tsx",
+      "sha256": "5390cdd8078f7db3e723ae3f1ba13e81d1cf2033b6dfc58a15c34401410437f2"
+    },
+    {
+      "path": "client/src/components/Navbar.tsx",
+      "sha256": "0a0681f265ee19828517db0e2cd03af5208cc5e1122686fdb062930d33c814aa"
+    },
+    {
+      "path": "client/src/components/PrivateRoute.tsx",
+      "sha256": "ecdfb34be0979373819c93a696e75cbf66133311e162c81b8dfd416c295397c0"
+    },
+    {
+      "path": "client/src/components/UnsavedChanges.tsx",
+      "sha256": "ffcd12097c798ebf728b02e8a53504a70284af61907f97f044bc2f7a5c656041"
+    },
+    {
+      "path": "client/src/components/ui/Badge.tsx",
+      "sha256": "b7d517e864f6bda4de727c3453f0e04ca96e03c6ed8d03d7012f6a03bfd63ecf"
+    },
+    {
+      "path": "client/src/components/ui/Button.tsx",
+      "sha256": "6e7f0b4d13a6019e0cf7ec4af773b9f2cf4afe11e78d8b972b598667be05192d"
+    },
+    {
+      "path": "client/src/components/ui/Card.tsx",
+      "sha256": "bc7acd3433c9b16a0ae1391214fe99ed391c958f40247124f34c214ea2f17f87"
+    },
+    {
+      "path": "client/src/components/ui/Input.tsx",
+      "sha256": "0ea05727e8854eea6a4c34dcdb01cfe5089129c3ad0e1de2c41b1a7abeb67eac"
+    },
+    {
+      "path": "client/src/components/ui/Modal.tsx",
+      "sha256": "a7df870153ee94f5216468c044fce422dbb0e4b809df44358372795928868546"
+    },
+    {
+      "path": "client/src/components/ui/ProgressBar.tsx",
+      "sha256": "13dec8cb771fa718ae01dbfd64ba08b36c449d7626d2500ac9487fb7dd1baa67"
+    },
+    {
+      "path": "client/src/components/ui/Skeleton.tsx",
+      "sha256": "c9acf6a95b1c6d5cbfd171015459ae5c0e59fa3bc847056c56252335ed7dcf74"
+    },
+    {
+      "path": "client/src/context/AuthContext.tsx",
+      "sha256": "135adbf0b669be446f07a45a6ff67d8a99787e3dedbe884046810d78af5e7ec5"
+    },
+    {
+      "path": "client/src/context/auth.ts",
+      "sha256": "182af93b8e2a1a84f79674670fba6a5dcfac565caefb916f3e0747877a39771a"
+    },
+    {
+      "path": "client/src/index.css",
+      "sha256": "67b3cec78aef991a9d1aa28b29f1518c412bcf298e8343c563b7a1429471f7ed"
+    },
+    {
+      "path": "client/src/main.tsx",
+      "sha256": "0af291d0d204313a4ade68fc72529436c39bd106c835eb18a10e13de6ece0736"
+    },
+    {
+      "path": "client/src/pages/Dashboard.tsx",
+      "sha256": "57c920d9f63e9ec87eeb9579440fa510f4a8a5bb2cafa47f00408c72ff0342b6"
+    },
+    {
+      "path": "client/src/pages/JobSearch.tsx",
+      "sha256": "eb291ed7ac04a2b2e30b8456e2e5ec5e9ce06b9c01c418952e6e782cd8ae965e"
+    },
+    {
+      "path": "client/src/pages/Login.tsx",
+      "sha256": "e4737a471f4c0265a9a1c3bede4eb21c869219cf8da8f5847fb26d58c79f02fa"
+    },
+    {
+      "path": "client/src/pages/MatchHistory.tsx",
+      "sha256": "da6c35d2e570d7637159461baff7c19090e9dd48fc513d0e454de22fbb512267"
+    },
+    {
+      "path": "client/src/pages/MatchResume.tsx",
+      "sha256": "6629ec7fd13729293ef1322a5aba1035b2a9d431e494f07daaa95a0cd8497999"
+    },
+    {
+      "path": "client/src/pages/Profile.tsx",
+      "sha256": "675ff6b1101840a9966c6710c4e0babc20d4cc7fdc38a22d0d7f3766bfe2e096"
+    },
+    {
+      "path": "client/src/pages/Recover.tsx",
+      "sha256": "d782ddd53f2c1716e92164fa7931027928c3319b5b807487c5f27c4676acfc07"
+    },
+    {
+      "path": "client/src/pages/Register.tsx",
+      "sha256": "a7407fbace3e54eb5a501181222882115212cd1fe215bf1550c210722d097030"
+    },
+    {
+      "path": "client/src/pages/ResumeBuilder.tsx",
+      "sha256": "0910ffcee754d58862ffefa18b32c887d7e9e349c15e62e37bfd21f315deda18"
+    },
+    {
+      "path": "client/src/pages/ResumeUpload.tsx",
+      "sha256": "64fafb66e1cac97fdc53fb923616d3dab5aa713cc78502c38b797cb8c0cddd1b"
+    },
+    {
+      "path": "client/src/services/api.ts",
+      "sha256": "43b41e8ae0c3c5bc4ea9d110e1e8ab6d9f505fbd0bc168e89cb162dd7b489f35"
+    },
+    {
+      "path": "client/tests/design.spec.ts",
+      "sha256": "9c036baa9f160c0c850e1ba8abef112d5e07c3ddda120f54fe7026f22b98b701"
+    },
+    {
+      "path": "client/tests/foundation.spec.ts",
+      "sha256": "326d0a5372ce95922693af6d3cef49378c6fdc66b4022355623854b2d1421d16"
+    },
+    {
+      "path": "client/tests/helpers/account.ts",
+      "sha256": "223465d43c9724367a651f9696178e4d57246e89fea3cd0d090350dabdcde574"
+    },
+    {
+      "path": "client/tests/resume-library.spec.ts",
+      "sha256": "f6e27d70c0457ce332e2464bc151508f29a2142e42065225c6fb6f7d367aaf68"
+    },
+    {
+      "path": "client/vite.config.ts",
+      "sha256": "5a1ae507fa3a78121ef96eefd985f870c1aca81da620a38a3a07d35510be0a1b"
+    },
+    {
+      "path": "server/app.js",
+      "sha256": "bf12104857b8b1e87bed6a840d8f4d83a9e398a49027c1b130d71003310ebce0"
+    },
+    {
+      "path": "server/controllers/auth.controller.js",
+      "sha256": "de1a3d8edd7141eb1566cee9a72715e063f415884440b314461fdf8149adfe65"
+    },
+    {
+      "path": "server/controllers/job.controller.js",
+      "sha256": "755547c11638c6ccc1199c37cedf012a888d00d11187152bf67eb86898be192d"
+    },
+    {
+      "path": "server/controllers/match.controller.js",
+      "sha256": "5efaeedb039d3c2aac76252bfc3bd3e97d1a5543ec227d3540457e3c3774ba33"
+    },
+    {
+      "path": "server/controllers/resume.controller.js",
+      "sha256": "7c0cf90e15694f06391e8d21c68cdf93303843c2d8c25a401a1e5e885121be41"
+    },
+    {
+      "path": "server/controllers/resumeBuilder.controller.js",
+      "sha256": "824bbf74061b4721f029f2bdbf8ab6fa674d3d4d150b86a0d4b870955ef9384d"
+    },
+    {
+      "path": "server/middleware/auth.js",
+      "sha256": "3ded44e4a6a16b8e019f6a43e04412400d85d2d77dd29f36b764e1500b13346d"
+    },
+    {
+      "path": "server/middleware/errors.js",
+      "sha256": "954ad4d4bf50149036dbcdae350307cf6cd3b3243e941e79b7b7ce7914427616"
+    },
+    {
+      "path": "server/middleware/limits.js",
+      "sha256": "d239f63330b60a47295abab98f06efc4f140195845042150264fa6802bfad559"
+    },
+    {
+      "path": "server/middleware/resumeLimits.js",
+      "sha256": "109ac7f0d244f1af7aab38759533501a8585903c742e8f2e61dfb36357b10127"
+    },
+    {
+      "path": "server/middleware/upload.js",
+      "sha256": "719d3998ae37f32fb787911fa385368997683bf8b13a73e9d425bdbe41122fba"
+    },
+    {
+      "path": "server/middleware/validation.js",
+      "sha256": "57c8de84153fc338573aa0be51ea24bb2775af97f26c4d6571cb754aec8c9bf4"
+    },
+    {
+      "path": "server/models/Job.js",
+      "sha256": "0f8e0d7d72aa94ac9eac155f90d55f2cff920a13438083730d42c581c1e47e6d"
+    },
+    {
+      "path": "server/models/JobDescription.js",
+      "sha256": "7fe0a6731f288eaaa7e5999b815ccd5912f55bd09a6bea0979aa860aec275c3b"
+    },
+    {
+      "path": "server/models/JobMatch.js",
+      "sha256": "2fdf570b7b5414a1e9460308cef828fa25e0048c78369c7940621e423f7e8f27"
+    },
+    {
+      "path": "server/models/Match.js",
+      "sha256": "5b5e6e1231c389a3ecfee43cfaa85c0395a27886efadba34af0034a1a5ccaa36"
+    },
+    {
+      "path": "server/models/OperationLease.js",
+      "sha256": "86f6477fb3c30c1f5c638ba3dc7838ccf9998749559ab6ff89677d71628a52ac"
+    },
+    {
+      "path": "server/models/RateBucket.js",
+      "sha256": "8b1c79eafd9854202fbc80d08c44102f8ed0c7a1627a5b56c6dc4fa1b5a8f1c8"
+    },
+    {
+      "path": "server/models/Resume.js",
+      "sha256": "bcda9c4f5c00511aff09244592a6b1ebf92391eb8041ad65658c1ab987479c4a"
+    },
+    {
+      "path": "server/models/Session.js",
+      "sha256": "de2ae028118bd1f2ab67a6cbe558d08769cf970b3b8d52b23b12cf7c191a1ce6"
+    },
+    {
+      "path": "server/models/User.js",
+      "sha256": "0fd7978733b30f767b1606352cd03f028357e55bf9e75d8ae1fbf9efae93f21d"
+    },
+    {
+      "path": "server/package-lock.json",
+      "sha256": "04b919506d738be2984d402fa6b11f3765e5f426184df636cce5feff65575e7c"
+    },
+    {
+      "path": "server/package.json",
+      "sha256": "e89c8204c5e523a741ca148528f2a14b4b20f4b6661082017995c82ea3c29a6a"
+    },
+    {
+      "path": "server/routes/auth.routes.js",
+      "sha256": "dda04b6e6a1b1fdabd3799fcad17f5583049c805e274a6ce0c814084ba1c3635"
+    },
+    {
+      "path": "server/routes/job.routes.js",
+      "sha256": "c72a45bf342a4cb0606c617bf9175a6258a4f3d0435fdf152f160e58277e26fc"
+    },
+    {
+      "path": "server/routes/match.routes.js",
+      "sha256": "2da15433c8d2995893974d8cab5779a16d07dd1f25ece966bcf069b4a042e2ea"
+    },
+    {
+      "path": "server/routes/resume.routes.js",
+      "sha256": "092d5b6b8119ba7d9db345ef2626a63ad7138dd30668711dfc278a45f320a044"
+    },
+    {
+      "path": "server/routes/resumeBuilder.routes.js",
+      "sha256": "5caf7f7427cc37b85c848d3a13bb47e34ea9d3996952fb630d0e54cd5a9403a5"
+    },
+    {
+      "path": "server/server.js",
+      "sha256": "a9670a6eebdfe10b6b491dbd9196420834e81a60308ce2d3b4d11736a057a9c1"
+    },
+    {
+      "path": "server/services/aiService.js",
+      "sha256": "6b3f3a562046fde76493faa9d16a19930d702f729792a3994d593df6644924ec"
+    },
+    {
+      "path": "server/services/boundedParser.js",
+      "sha256": "be124833d344e907b1984cd4eac62f3cf96aaebbb067fa9c34a23c7e07005ff4"
+    },
+    {
+      "path": "server/services/jobScraper.js",
+      "sha256": "2c30d6dba70f74730ea517a50547a707eea71f0b99570955d6f4ce429c89db2f"
+    },
+    {
+      "path": "server/services/parseWorker.js",
+      "sha256": "f6a2c65cc42954d082b8acee7730f07b920c53fed7191704fe7786905c3e39cc"
+    },
+    {
+      "path": "server/services/privateFiles.js",
+      "sha256": "8bda9350ac7e0755b1150a416b4ccc9a7cb6af0c6368f09af39809db60315259"
+    },
+    {
+      "path": "server/services/providers.js",
+      "sha256": "3245e4c13205df8b4f4514f04985f95f5ca52ebd158d645da00937c9fe03a8ed"
+    },
+    {
+      "path": "server/services/resumeBuilder.js",
+      "sha256": "82e6bd9b42d55951a6740bf4896cf7cc2ec36b826a707c06e92b229dd519f407"
+    },
+    {
+      "path": "server/services/resumeParser.js",
+      "sha256": "ac3a3ab71960ac9f063a90acc2315921a904cf9ecc710fc15982fdd4607b8a08"
+    },
+    {
+      "path": "server/services/validateDocx.js",
+      "sha256": "6a5a2b88b5bb343f17b59d4282970454a1a4fdb9c5f9e9f597aa130b2a290168"
+    },
+    {
+      "path": "server/tests/browser-fixture.js",
+      "sha256": "67590611c1839cbe75bdc5a2621226a541062073729eaed19290396be40a160e"
+    },
+    {
+      "path": "server/tests/foundation.test.js",
+      "sha256": "a2f68fbb6db8d7754aa491fa311af7374c640ee96a351c673039b80627f0865b"
+    }
+  ]
+}

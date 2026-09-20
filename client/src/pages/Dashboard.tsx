@@ -14,7 +14,7 @@ interface Resume {
   createdAt: string;
   sections: {
     skills: string[];
-    experience: any[];
+    experience: unknown[];
   };
 }
 
@@ -48,7 +48,7 @@ const Dashboard = () => {
       ]);
       setResumes(resumesRes.data);
       setRecentMatches(matchesRes.data.slice(0, 5));
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);

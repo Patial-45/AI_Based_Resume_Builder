@@ -15,8 +15,8 @@ const ProgressBar = ({
   color = 'blue',
   className = '',
 }: ProgressBarProps) => {
-  const percentage = Math.min((value / max) * 100, 100);
-  
+  const percentage = Number.isFinite(value) && Number.isFinite(max) && max > 0 ? Math.max(0, Math.min((value / max) * 100, 100)) : 0;
+
   const colorClasses = {
     blue: 'bg-blue-600',
     green: 'bg-green-600',
@@ -30,10 +30,10 @@ const ProgressBar = ({
       {showLabel && label && (
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm font-medium text-gray-700">{label}</span>
-          <span className="text-sm font-semibold text-gray-800">{value}%</span>
+          <span className="text-sm font-semibold text-gray-800">{Math.round(percentage)}%</span>
         </div>
       )}
-      <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+      <div role="progressbar" aria-label={label || "Progress"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage} className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
         <div
           className={`h-full ${colorClasses[color]} transition-all duration-500 ease-out rounded-full`}
           style={{ width: `${percentage}%` }}
@@ -44,5 +44,3 @@ const ProgressBar = ({
 };
 
 export default ProgressBar;
-
-

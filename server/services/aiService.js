@@ -1,25 +1,21 @@
-import OpenAI from 'openai';
-import Groq from 'groq-sdk';
+import { getOpenAI, getGroq } from './providers.js';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
-});
+
+
+
 
 // Get embeddings using OpenAI
 export const getEmbedding = async (text) => {
   // Guard: empty text
   if (!text || !text.trim()) {
-    console.warn("⚠️ getEmbedding called with empty text. Returning null.");
+    /* Provider payloads and account data must not be logged. */
     return null;
   }
 
   // Guard: missing API key
   if (!process.env.OPENAI_API_KEY) {
-    console.warn("⚠️ OPENAI_API_KEY is missing. Skipping embedding generation.");
+    /* Provider payloads and account data must not be logged. */
     return null; // or throw new Error("OPENAI_API_KEY is missing");
   }
 
@@ -27,16 +23,16 @@ export const getEmbedding = async (text) => {
     // Optional: truncate very large text to avoid token limits / huge cost
     const safeText = text.length > 8000 ? text.slice(0, 8000) : text;
 
-    const response = await openai.embeddings.create({
+    const response = await getOpenAI().embeddings.create({
       model: "text-embedding-3-small",
       input: safeText,
     });
 
     return response.data[0].embedding;
   } catch (error) {
-    console.error("❌ Error getting embedding:");
-    console.error("Message:", error.message);
-    console.error("Response data:", error.response?.data);
+    /* Provider payloads and account data must not be logged. */
+    /* Provider payloads and account data must not be logged. */
+    /* Provider payloads and account data must not be logged. */
     // Instead of killing the whole request, just return null
     return null;
     // If you *want* to fail hard, use:
@@ -51,7 +47,7 @@ export const cosineSimilarity = (vecA, vecB) => {
   if (!vecA || !vecB || !Array.isArray(vecA) || !Array.isArray(vecB)) {
     throw new Error('Both vectors must be arrays');
   }
-  
+
   if (vecA.length !== vecB.length) {
     throw new Error(`Vectors must have the same length. Got ${vecA.length} and ${vecB.length}`);
   }
@@ -84,7 +80,7 @@ export const cosineSimilarity = (vecA, vecB) => {
 export const matchResumeWithJD = async (resumeText, jdText, resumeSections) => {
   // Guard: missing API key
   if (!process.env.OPENAI_API_KEY) {
-    console.warn("⚠️ OPENAI_API_KEY is missing. Cannot perform AI matching.");
+    /* Provider payloads and account data must not be logged. */
     throw new Error('OpenAI API key is not configured. Please set OPENAI_API_KEY in your environment variables.');
   }
 
@@ -146,7 +142,7 @@ Return ONLY valid JSON in this format:
   "weaknesses": ["Missing some required technologies", "Could use more quantifiable achievements"]
 }`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4-turbo-preview',
       messages: [
         { role: 'system', content: 'You are an expert resume analyzer. Always return valid JSON.' },
@@ -163,12 +159,12 @@ Return ONLY valid JSON in this format:
 
     try {
       const result = JSON.parse(content);
-      
+
       // Validate result structure
       if (!result.overallScore && result.overallScore !== 0) {
         throw new Error('Invalid response format: missing overallScore');
       }
-      
+
       // Ensure all required fields exist
       return {
         overallScore: result.overallScore || 0,
@@ -183,13 +179,13 @@ Return ONLY valid JSON in this format:
         weaknesses: result.weaknesses || []
       };
     } catch (parseError) {
-      console.error('Error parsing OpenAI response:', parseError);
-      console.error('Response content:', content);
+      /* Provider payloads and account data must not be logged. */
+      /* Provider payloads and account data must not be logged. */
       throw new Error('Failed to parse AI response. Please try again.');
     }
   } catch (error) {
-    console.error('Error matching resume with JD:', error);
-    
+    /* Provider payloads and account data must not be logged. */
+
     // Provide more specific error messages
     if (error.response?.status === 401) {
       throw new Error('Invalid OpenAI API key. Please check your configuration.');
@@ -205,8 +201,19 @@ Return ONLY valid JSON in this format:
 
 // Find jobs using Llama (Groq) for job portal scanning
 export const findRelevantJobs = async (resumeText, resumeSections, userPreferences = {}) => {
+  if (!process.env.GROQ_API_KEY) {
+    /* Provider payloads and account data must not be logged. */
+    const jobTitle = resumeSections?.experience?.[0]?.title || 'Software Engineer';
+    return {
+      jobTitles: [jobTitle],
+      keySkills: resumeSections?.skills || [],
+      industryKeywords: [],
+      searchQueries: [jobTitle, `${jobTitle} developer`]
+    };
+  }
+
   try {
-    const prompt = `Based on the following resume, help identify the best job search queries and keywords to find relevant jobs on job portals like Naukri, LinkedIn, Glassdoor, iimjobs, Indeed, Unstop, Foundit, and other major job platforms.
+    const prompt = `Based on the following resume, help identify the best job search queries and keywords to find relevant jobs on job portals.
 
 RESUME TEXT:
 ${resumeText}
@@ -217,14 +224,6 @@ ${JSON.stringify(resumeSections, null, 2)}
 USER PREFERENCES:
 ${JSON.stringify(userPreferences, null, 2)}
 
-Please provide:
-1. Job title suggestions (array of 5-10 relevant job titles)
-2. Key skills to search for (array of 10-15 skills)
-3. Industry keywords (array of 5-8 keywords)
-4. Search queries (array of 3-5 search query strings optimized for job portals including Indian platforms like Naukri, iimjobs, Unstop, and Foundit)
-
-Note: For Indian job portals (Naukri, iimjobs, Foundit), consider using common Indian job titles and terminology. For platforms like Unstop, focus on entry-level and fresher positions.
-
 Return ONLY valid JSON in this format:
 {
   "jobTitles": ["Software Engineer", "Full Stack Developer"],
@@ -232,13 +231,12 @@ Return ONLY valid JSON in this format:
   "industryKeywords": ["Tech", "SaaS", "E-commerce"],
   "searchQueries": [
     "software engineer javascript react",
-    "full stack developer node.js",
-    "frontend developer react typescript"
+    "full stack developer node.js"
   ]
 }`;
 
-    const response = await groq.chat.completions.create({
-      model: 'llama-3.1-70b-versatile',
+    const response = await getGroq().chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: 'You are a job search expert. Always return valid JSON.' },
         { role: 'user', content: prompt }
@@ -250,10 +248,17 @@ Return ONLY valid JSON in this format:
     const result = JSON.parse(response.choices[0].message.content);
     return result;
   } catch (error) {
-    console.error('Error finding relevant jobs:', error);
-    throw new Error('Failed to find relevant jobs');
+    /* Provider payloads and account data must not be logged. */
+    const jobTitle = resumeSections?.experience?.[0]?.title || 'Software Engineer';
+    return {
+      jobTitles: [jobTitle],
+      keySkills: resumeSections?.skills || [],
+      industryKeywords: [],
+      searchQueries: [jobTitle]
+    };
   }
 };
+
 
 // Generate keyword suggestions using OpenAI
 export const generateKeywordSuggestions = async (resumeText, jdText) => {
@@ -284,7 +289,7 @@ Return ONLY valid JSON array:
   }
 ]`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4-turbo-preview',
       messages: [
         { role: 'system', content: 'You are a career advisor. Always return valid JSON array.' },
@@ -297,8 +302,7 @@ Return ONLY valid JSON array:
     const result = JSON.parse(response.choices[0].message.content);
     return Array.isArray(result) ? result : result.suggestions || [];
   } catch (error) {
-    console.error('Error generating keyword suggestions:', error);
+    /* Provider payloads and account data must not be logged. */
     throw new Error('Failed to generate keyword suggestions');
   }
 };
-

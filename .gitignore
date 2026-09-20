@@ -44,3 +44,6 @@ coverage/
 *.tmp
 *.temp
 
+# Local browser test artifacts (may contain synthetic sessions)
+client/test-results/
+client/playwright-report/

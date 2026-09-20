@@ -19,11 +19,17 @@ const jobSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  country: {
+    type: String,
+    default: 'India',
+    index: true
+  },
   source: {
     type: String,
     required: true,
-    enum: ['indeed', 'linkedin', 'glassdoor', 'monster', 'ziprecruiter', 'other']
+    enum: ['indeed', 'linkedin', 'glassdoor', 'naukri', 'iimjobs', 'unstop', 'foundit', 'remotive', 'jobicy', 'wellfound', 'itjobs', 'cutshort', 'hirist', 'hackernews', 'monster', 'ziprecruiter', 'sample', 'other']
   },
+
   sourceUrl: {
     type: String,
     required: true,
@@ -62,9 +68,10 @@ const jobSchema = new mongoose.Schema({
 jobSchema.index({ title: 'text', company: 'text', description: 'text' });
 jobSchema.index({ postedDate: -1 });
 jobSchema.index({ source: 1, isActive: 1 });
-
+// TTL index: Automatically purge jobs older than 3 days (259200 seconds)
+jobSchema.index({ createdAt: 1 }, { expireAfterSeconds: 259200 });
 
 const Job = mongoose.model('Job', jobSchema);
 
-export default Job;
 
+export default Job;

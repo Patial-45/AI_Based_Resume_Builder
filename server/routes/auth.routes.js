@@ -1,61 +1,16 @@
 import express from 'express';
-import { body, validationResult } from 'express-validator';
-import { register, login, getProfile, updateProfile } from '../controllers/auth.controller.js';
+import { register, login, getProfile, updateProfile, logout, changePassword, createRecoveryCode, recoverAccount } from '../controllers/auth.controller.js';
 import { protect } from '../middleware/auth.js';
-
+import { rateLimit, userKey } from '../middleware/limits.js';
 const router = express.Router();
-
-// Validation middleware
-const validate = (req, res, next) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      console.log('Validation errors:', errors.array());
-      return res.status(400).json({ 
-        message: errors.array()[0].msg,
-        errors: errors.array()
-      });
-    }
-    next();
-  } catch (error) {
-    console.error('Validation middleware error:', error);
-    next();
-  }
-};
-
-// Validation rules
-const registerValidation = [
-  body('name').trim().notEmpty().withMessage('Name is required'),
-  body('email').isEmail().withMessage('Please provide a valid email'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  validate
-];
-
-const loginValidation = [
-  body('email').isEmail().withMessage('Please provide a valid email'),
-  body('password').notEmpty().withMessage('Password is required'),
-  validate
-];
-
-// Test endpoint to check if route is working
-router.get('/test', (req, res) => {
-  res.json({ message: 'Auth route is working', timestamp: new Date().toISOString() });
-});
-
-// Debug middleware to log request
-router.post('/register', (req, res, next) => {
-  console.log('=== REGISTER REQUEST ===');
-  console.log('Body:', { 
-    name: req.body?.name, 
-    email: req.body?.email, 
-    hasPassword: !!req.body?.password 
-  });
-  console.log('Headers:', req.headers);
-  next();
-}, registerValidation, register);
-router.post('/login', loginValidation, login);
+const attempts = rateLimit('auth-ip', 20, 15 * 60000);
+const identity = rateLimit('auth-identity', 10, 15 * 60000, req => typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase().slice(0, 254) : req.ip);
+router.post('/register', attempts, identity, register);
+router.post('/login', attempts, identity, login);
+router.post('/recover', attempts, identity, recoverAccount);
+router.post('/recovery-code', protect, rateLimit('recovery-user', 5, 900000, userKey), createRecoveryCode);
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);
-
+router.post('/logout', protect, logout);
+router.put('/password', protect, rateLimit('password', 5, 15 * 60000, req => req.user._id), changePassword);
 export default router;
-

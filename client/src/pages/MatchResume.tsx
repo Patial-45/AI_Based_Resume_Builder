@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { api, errorMessage, isUnauthorized } from '../services/api';
 import { FiSearch, FiTrendingUp, FiCheckCircle, FiXCircle, FiAlertCircle, FiFileText, FiTarget } from 'react-icons/fi';
 
 import toast from 'react-hot-toast';
@@ -126,16 +126,21 @@ const MatchResume = () => {
   const fetchResumes = async () => {
     try {
       const response = await api.get('/resumes');
-      setResumes(response.data);
-      if (response.data.length > 0) {
-        setSelectedResume(response.data[0]._id);
+      const list = Array.isArray(response.data) ? response.data : [];
+      setResumes(list);
+      if (list.length > 0) {
+        setSelectedResume(list[0]._id);
       }
-    } catch (error: any) {
-      toast.error('Failed to load resumes');
+    } catch (error) {
+
+      if (!isUnauthorized(error)) {
+        toast.error('Could not load resumes. Please upload a resume first.');
+      }
     } finally {
       setLoadingResumes(false);
     }
   };
+
 
   const handleMatch = async () => {
     if (!selectedResume) {
@@ -157,8 +162,8 @@ const MatchResume = () => {
       });
       setMatchResult(response.data);
       toast.success('Match analysis completed!');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Matching failed');
+    } catch (error) {
+      toast.error(errorMessage(error, 'Matching failed'));
     } finally {
       setLoading(false);
     }
@@ -201,7 +206,7 @@ const MatchResume = () => {
                 <FiFileText className="mr-2 text-blue-600" />
                 Resume & Job Details
               </h2>
-              
+
               <div className="space-y-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -210,20 +215,28 @@ const MatchResume = () => {
                   {loadingResumes ? (
                     <Skeleton className="h-10 w-full" />
                   ) : (
-                    <select
-                      value={selectedResume}
-                      onChange={(e) => setSelectedResume(e.target.value)}
-                      className="input"
-                    >
-                      <option value="">Select a resume...</option>
-                      {resumes.map((resume) => (
-                        <option key={resume._id} value={resume._id}>
-                          {resume.fileName}
-                        </option>
-                      ))}
-                    </select>
+                    <>
+                      <select
+                        value={selectedResume}
+                        onChange={(e) => setSelectedResume(e.target.value)}
+                        className="input"
+                      >
+                        <option value="">Select a resume...</option>
+                        {resumes.map((resume) => (
+                          <option key={resume._id} value={resume._id}>
+                            {resume.fileName}
+                          </option>
+                        ))}
+                      </select>
+                      {resumes.length === 0 && !loadingResumes && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          No resumes found. <a href="/upload" className="underline font-semibold">Upload a resume first</a> to calculate match scores.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
+
 
                 <Input
                   label="Job Title"

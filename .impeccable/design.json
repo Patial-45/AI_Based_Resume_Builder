@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-11T04:52:05.889Z",
+  "title": "Resume Builder approved design",
+  "extensions": {
+    "motion": [
+      {
+        "name": "dialog",
+        "value": "200ms cubic-bezier(.23,1,.32,1)",
+        "purpose": "Brief dialog entry; removed for reduced motion"
+      },
+      {
+        "name": "controls",
+        "value": "140ms",
+        "purpose": "Color/press feedback"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact",
+        "value": "1024px"
+      },
+      {
+        "name": "mobile",
+        "value": "768px"
+      }
+    ],
+    "shadows": [
+      {
+        "name": "dialog",
+        "value": "0 24px 80px #25292340",
+        "purpose": "Modal elevation only"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary task action",
+      "html": "<button class=\"primary\">Save changes</button>",
+      "css": ".primary{background:#176B5B;color:#fff;border:0;border-radius:10px;padding:10px 18px;min-height:44px;font:600 14px Segoe UI,system-ui,sans-serif}.primary:focus-visible{outline:3px solid #176B5B;outline-offset:3px}.primary:hover{background:#105346}"
+    }
+  ],
+  "narrative": {
+    "overview": "Owner-approved warm off-white canvas, white work surfaces, charcoal text and deep teal controls.",
+    "keyCharacteristics": [
+      "Readable",
+      "Task-focused",
+      "Consistent across modules"
+    ],
+    "dos": [
+      "Use real status labels",
+      "Preserve reviewed facts",
+      "Keep controls accessible"
+    ],
+    "donts": [
+      "Invent ATS guarantees",
+      "Hide errors in transient notifications",
+      "Change the approved palette per feature"
+    ]
+  }
+}

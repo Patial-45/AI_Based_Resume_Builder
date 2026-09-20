@@ -48,5 +48,3 @@ export const CardBody = ({ children, className = '' }: CardBodyProps) => {
 export const CardFooter = ({ children, className = '' }: CardFooterProps) => {
   return <div className={`card-footer ${className}`}>{children}</div>;
 };
-
-

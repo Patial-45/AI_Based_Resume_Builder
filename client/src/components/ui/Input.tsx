@@ -1,61 +1,18 @@
-import type { InputHTMLAttributes, ReactNode } from 'react';
-
-
+import { useId, type InputHTMLAttributes, type ReactNode } from 'react';
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
-  leftIcon?: ReactNode;
-  rightIcon?: ReactNode;
-  helperText?: string;
+  label?: string; error?: string; leftIcon?: ReactNode; rightIcon?: ReactNode; helperText?: string;
 }
-
-const Input = ({
-  label,
-  error,
-  leftIcon,
-  rightIcon,
-  helperText,
-  className = '',
-  ...props
-}: InputProps) => {
-  return (
-    <div className="w-full">
-      {label && (
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          {label}
-        </label>
-      )}
-      <div className="relative">
-        {leftIcon && (
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            {leftIcon}
-          </div>
-        )}
-        <input
-          className={`input ${error ? 'input-error' : ''} ${
-            leftIcon ? 'pl-10' : ''
-          } ${rightIcon ? 'pr-10' : ''} ${className}`}
-          {...props}
-        />
-        {rightIcon && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            {rightIcon}
-          </div>
-        )}
-      </div>
-      {error && (
-        <p className="mt-1 text-sm text-red-600 flex items-center">
-          <span className="mr-1">⚠</span>
-          {error}
-        </p>
-      )}
-      {helperText && !error && (
-        <p className="mt-1 text-sm text-gray-500">{helperText}</p>
-      )}
+export default function Input({ label, error, leftIcon, rightIcon, helperText, className = '', id, ...props }: InputProps) {
+  const generated = useId(), inputId = id || generated, descriptionId = inputId + '-description';
+  const description = error || helperText;
+  return <div className="w-full">
+    {label && <label htmlFor={inputId} className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>}
+    <div className="relative">
+      {leftIcon && <span aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">{leftIcon}</span>}
+      <input {...props} id={inputId} aria-invalid={error ? true : props['aria-invalid']} aria-describedby={[props['aria-describedby'], description ? descriptionId : null].filter(Boolean).join(' ') || undefined}
+        className={['input', error ? 'input-error' : '', leftIcon ? 'pl-10' : '', rightIcon ? 'pr-10' : '', className].join(' ')} />
+      {rightIcon && <span className="absolute right-3 top-1/2 -translate-y-1/2">{rightIcon}</span>}
     </div>
-  );
-};
-
-export default Input;
-
-
+    {description && <p id={descriptionId} className={'mt-2 text-sm ' + (error ? 'text-red-700' : 'text-gray-600')}>{description}</p>}
+  </div>;
+}

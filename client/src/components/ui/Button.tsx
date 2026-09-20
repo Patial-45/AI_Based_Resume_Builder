@@ -1,8 +1,9 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import { FiLoader } from 'react-icons/fi';
 
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  ref?: Ref<HTMLButtonElement>;
   variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
@@ -20,6 +21,7 @@ const Button = ({
   rightIcon,
   className = '',
   disabled,
+  type = 'button',
   ...props
 }: ButtonProps) => {
   const baseClasses = 'btn';
@@ -39,6 +41,8 @@ const Button = ({
   return (
     <button
       className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      type={type}
+      aria-busy={isLoading || undefined}
       disabled={disabled || isLoading}
       {...props}
     >
@@ -59,5 +63,3 @@ const Button = ({
 };
 
 export default Button;
-
-

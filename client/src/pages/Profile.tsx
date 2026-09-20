@@ -1,206 +1,99 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { api } from '../services/api';
-import { FiUser, FiMail, FiSave, FiBriefcase, FiMapPin, FiDollarSign, FiRadio } from 'react-icons/fi';
-import toast from 'react-hot-toast';
-import { Card, CardBody } from '../components/ui/Card';
+import { useState, useRef } from 'react';
+import { useAuth } from '../context/auth';
+import { api, errorMessage, setCsrfToken } from '../services/api';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import Skeleton from '../components/ui/Skeleton';
-
-const Profile = () => {
-  const { user } = useAuth();
-  const [name, setName] = useState('');
-  const [preferences, setPreferences] = useState({
-    jobTitle: '',
-    location: '',
-    remote: false,
-    minSalary: '',
-    maxSalary: '',
-  });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
+import Modal from '../components/ui/Modal';
+import UnsavedChanges from '../components/UnsavedChanges';
+export default function Profile() {
+  const recoveryButton = useRef<HTMLButtonElement>(null);
+  const { user, setUser } = useAuth();
+  const initial = { name: user?.name || '', jobTitle: user?.preferences?.jobTitle || '', location: user?.preferences?.location || '', remote: user?.preferences?.remote || false, minSalary: user?.preferences?.minSalary?.toString() || '', maxSalary: user?.preferences?.maxSalary?.toString() || '' };
+  const [values, setValues] = useState(initial), [saved, setSaved] = useState(initial);
+  const [tab, setTab] = useState<'profile' | 'security'>('profile');
+  const [current, setCurrent] = useState(''), [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(''), [status, setStatus] = useState(''), [error, setError] = useState('');
+  const [securityFeedback, setSecurityFeedback] = useState<{ action: 'password' | 'recovery'; message: string; error: boolean } | null>(null);
+  const [code, setCode] = useState('');
+  const dirty = JSON.stringify(values) !== JSON.stringify(saved);
+  const field = (key: keyof typeof values, value: string | boolean) => { setValues(v => ({ ...v, [key]: value })); setStatus(''); };
+  async function save(event: React.FormEvent) {
+    event.preventDefault(); setBusy('profile'); setStatus(''); setError('');
     try {
-      const response = await api.get('/auth/profile');
-      setName(response.data.name || '');
-      setPreferences({
-        jobTitle: response.data.preferences?.jobTitle || '',
-        location: response.data.preferences?.location || '',
-        remote: response.data.preferences?.remote || false,
-        minSalary: response.data.preferences?.minSalary?.toString() || '',
-        maxSalary: response.data.preferences?.maxSalary?.toString() || '',
-      });
-    } catch (error: any) {
-      toast.error('Failed to load profile');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await api.put('/auth/profile', {
-        name,
-        preferences: {
-          ...preferences,
-          minSalary: preferences.minSalary ? parseInt(preferences.minSalary) : undefined,
-          maxSalary: preferences.maxSalary ? parseInt(preferences.maxSalary) : undefined,
-        },
-      });
-      toast.success('Profile updated successfully!');
-    } catch (error: any) {
-      toast.error('Failed to update profile');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-8 animate-fade-in">
-        <Skeleton className="h-32 w-full" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Skeleton className="h-96 w-full" />
-          <Skeleton className="h-96 w-full" />
-        </div>
-      </div>
-    );
+      const { name, ...preferences } = values;
+      const response = await api.put('/auth/profile', { name, preferences: { ...preferences,
+        minSalary: preferences.minSalary === '' ? null : Number(preferences.minSalary),
+        maxSalary: preferences.maxSalary === '' ? null : Number(preferences.maxSalary) } });
+      const confirmed = { ...values, name: response.data.name };
+      setUser(response.data); setValues(confirmed); setSaved(confirmed); setStatus('Profile saved.');
+    } catch (cause) { setError(errorMessage(cause)); } finally { setBusy(''); }
   }
-
-  return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-8 text-white shadow-2xl">
-        <div className="relative z-10">
-          <h1 className="text-4xl font-bold mb-2">Profile Settings</h1>
-          <p className="text-indigo-100">Manage your account and job preferences</p>
-        </div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
-      </div>
-
-      {/* Account Information */}
-      <Card>
-        <CardBody className="p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-            <FiUser className="mr-2 text-blue-600" />
-            Account Information
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input
-              label="Full Name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
-              leftIcon={<FiUser />}
-            />
-
-            <Input
-              label="Email Address"
-              type="email"
-              value={user?.email || ''}
-              disabled
-              leftIcon={<FiMail />}
-              helperText="Email cannot be changed"
-            />
-          </div>
-        </CardBody>
-      </Card>
-
-      {/* Job Preferences */}
-      <Card>
-        <CardBody className="p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-            <FiBriefcase className="mr-2 text-green-600" />
-            Job Preferences
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input
-              label="Preferred Job Title"
-              type="text"
-              value={preferences.jobTitle}
-              onChange={(e) => setPreferences({ ...preferences, jobTitle: e.target.value })}
-              placeholder="e.g., Software Engineer"
-              leftIcon={<FiBriefcase />}
-            />
-
-            <Input
-              label="Preferred Location"
-              type="text"
-              value={preferences.location}
-              onChange={(e) => setPreferences({ ...preferences, location: e.target.value })}
-              placeholder="e.g., San Francisco, CA"
-              leftIcon={<FiMapPin />}
-            />
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Minimum Salary
-              </label>
-              <div className="relative">
-                <FiDollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="number"
-                  value={preferences.minSalary}
-                  onChange={(e) => setPreferences({ ...preferences, minSalary: e.target.value })}
-                  placeholder="e.g., 80000"
-                  className="input pl-10"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Maximum Salary
-              </label>
-              <div className="relative">
-                <FiDollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="number"
-                  value={preferences.maxSalary}
-                  onChange={(e) => setPreferences({ ...preferences, maxSalary: e.target.value })}
-                  placeholder="e.g., 150000"
-                  className="input pl-10"
-                />
-              </div>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={preferences.remote}
-                  onChange={(e) => setPreferences({ ...preferences, remote: e.target.checked })}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <FiRadio className="text-gray-600" />
-                <span className="font-medium text-gray-700">Prefer Remote Jobs</span>
-              </label>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button
-          onClick={handleSave}
-          isLoading={saving}
-          size="lg"
-          rightIcon={<FiSave />}
-        >
-          Save Changes
-        </Button>
+  async function security(action: 'password' | 'recovery') {
+    setSecurityFeedback(null);
+    if (!current) { setSecurityFeedback({ action, message: 'Enter your current password to continue.', error: true }); return; }
+    setBusy(action);
+    try {
+      if (action === 'password') {
+        const { data } = await api.put('/auth/password', { currentPassword: current, newPassword: password }, { timeout: 20000 });
+        setCsrfToken(data.csrfToken);
+        const { csrfToken: unused, ...account } = data; void unused;
+        setUser(account); setPassword(''); setSecurityFeedback({ action, message: 'Password changed. Other sessions have been signed out.', error: false });
+      } else setCode((await api.post('/auth/recovery-code', { password: current }, { timeout: 20000 })).data.recoveryCode);
+      setCurrent('');
+    } catch (cause) { setSecurityFeedback({ action, message: errorMessage(cause), error: true }); } finally { setBusy(''); }
+  }
+  function tabKeys(event: React.KeyboardEvent<HTMLButtonElement>) {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const target = event.key === 'Home' ? 'profile' : event.key === 'End' ? 'security' : tab === 'profile' ? 'security' : 'profile';
+    setTab(target); document.getElementById('settings-tab-' + target)?.focus();
+  }
+  return <section className="settings-page">
+    <UnsavedChanges dirty={dirty || !!current || !!password} />
+    <div className="page-heading"><h1>Account settings</h1><p>Manage your profile, preferences and security.</p></div>
+    <div role="tablist" aria-label="Account settings sections" className="workspace-tabs">
+      {(['profile', 'security'] as const).map(value => <button key={value} type="button" id={'settings-tab-' + value} role="tab" aria-selected={tab === value} aria-controls={'settings-panel-' + value} tabIndex={tab === value ? 0 : -1} onKeyDown={tabKeys} onClick={() => setTab(value)}>{value === 'profile' ? 'Profile & preferences' : 'Security'}</button>)}
+    </div>
+    <div role="tabpanel" id="settings-panel-profile" aria-labelledby="settings-tab-profile" hidden={tab !== 'profile'}>
+      <form onSubmit={save} className="card settings-form">
+        <fieldset disabled={!!busy}>
+          <section className="form-section"><h2>Profile</h2><div className="form-grid">
+            <Input label="Full name" maxLength={100} autoComplete="name" value={values.name} onChange={e => field('name', e.target.value)} required />
+            <Input label="Email address" value={user?.email || ''} readOnly helperText="Email changes are not available yet." />
+          </div></section>
+          <section className="form-section"><h2>Job preferences</h2><div className="form-grid">
+            <Input label="Preferred job title" maxLength={120} value={values.jobTitle} onChange={e => field('jobTitle', e.target.value)} />
+            <Input label="Preferred location" maxLength={120} value={values.location} onChange={e => field('location', e.target.value)} />
+            <Input label="Minimum annual salary" type="number" min={0} max={1000000000} step={1} value={values.minSalary} onChange={e => field('minSalary', e.target.value)} />
+            <Input label="Maximum annual salary" type="number" min={0} max={1000000000} step={1} value={values.maxSalary} onChange={e => field('maxSalary', e.target.value)} />
+          </div><label className="form-check"><input type="checkbox" checked={values.remote} onChange={e => field('remote', e.target.checked)} />Prefer remote roles</label>
+            <p className="text-sm supporting-text">Your preferences are saved with your profile. Salary filtering is not available yet.</p>
+          </section>
+        </fieldset>
+        {error && <div role="alert" className="form-alert error mt-5">{error}</div>}
+        <div className="action-row save-row"><p className="save-state" role="status">{busy === 'profile' ? 'Saving changes…' : status || (dirty ? 'Unsaved changes' : 'No unsaved changes')}</p><Button type="submit" isLoading={busy === 'profile'} disabled={!!busy || !dirty}>Save changes</Button></div>
+      </form>
+    </div>
+    <div role="tabpanel" id="settings-panel-security" aria-labelledby="settings-tab-security" hidden={tab !== 'security'}>
+      <div className="card settings-form">
+        <section className="form-section"><h2>Password and recovery</h2><p className="supporting-text mb-5">Enter your current password to change it or create a recovery code.</p>
+          <div className="form-grid"><Input label="Current password" type="password" autoComplete="current-password" value={current} disabled={!!busy} onChange={e => setCurrent(e.target.value)} /></div>
+        </section>
+        <section className="form-section"><h2>Change password</h2><div className="form-grid"><Input label="New password" type="password" autoComplete="new-password" value={password} disabled={!!busy} onChange={e => setPassword(e.target.value)} helperText="At least 12 characters, up to 72 UTF-8 bytes." /></div>
+          <p className="text-sm supporting-text mt-4">Changing your password signs out your other sessions.</p>
+          <div className="action-row"><Button disabled={!!busy || !current || [...password].length < 12} isLoading={busy === 'password'} onClick={() => void security('password')}>Change password</Button></div>
+          {securityFeedback?.action === 'password' && <div role={securityFeedback.error ? 'alert' : 'status'} className={'form-alert mt-5' + (securityFeedback.error ? ' error' : '')}>{securityFeedback.message}</div>}
+        </section>
+        <section className="form-section"><h2>Account recovery</h2><p className="supporting-text">Create a recovery code and keep it in your password manager. Creating another code replaces the previous one. Email recovery is not available.</p>
+          <div className="action-row"><Button ref={recoveryButton} variant="secondary" disabled={!!busy} isLoading={busy === 'recovery'} onClick={() => void security('recovery')}>Create recovery code</Button></div>
+          {securityFeedback?.action === 'recovery' && <div role={securityFeedback.error ? 'alert' : 'status'} className={'form-alert mt-5' + (securityFeedback.error ? ' error' : '')}>{securityFeedback.message}</div>}
+        </section>
       </div>
     </div>
-  );
-};
-
-export default Profile;
+    <Modal isOpen={!!code} onClose={() => { setCode(''); requestAnimationFrame(() => recoveryButton.current?.focus()); }} title="Save your recovery code">
+      <p className="mb-4 supporting-text">This code is shown once and can reset your password. Store it privately before closing this dialog.</p>
+      <code className="block break-all bg-stone-100 rounded-lg p-4 select-all">{code}</code>
+      <Button className="mt-5" onClick={() => { setCode(''); requestAnimationFrame(() => recoveryButton.current?.focus()); }}>I saved my code</Button>
+    </Modal>
+  </section>;
+}

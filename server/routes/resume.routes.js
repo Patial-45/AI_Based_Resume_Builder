@@ -1,21 +1,20 @@
 import express from 'express';
 import { protect } from '../middleware/auth.js';
-import upload from '../middleware/upload.js';
-import {
-  uploadResume,
-  getResumes,
-  getResumeById,
-  deleteResume,
-  updateResume
-} from '../controllers/resume.controller.js';
-
+import { HttpError } from '../middleware/errors.js';
+import { validateIdentifiers } from '../middleware/validation.js';
+import { resumeMutation } from '../middleware/resumeLimits.js';
+import { rateLimit, userKey } from '../middleware/limits.js';
+import upload, { storeUpload } from '../middleware/upload.js';
+import { uploadResume, getResumes, getResumeById, downloadResume, deleteResume, updateResume, saveResumeContent, getResumeVersion, getResumeLimits } from '../controllers/resume.controller.js';
 const router = express.Router();
-
-router.post('/', protect, upload.single('resume'), uploadResume);
-router.get('/', protect, getResumes);
-router.get('/:id', protect, getResumeById);
-router.delete('/:id', protect, deleteResume);
-router.put('/:id', protect, updateResume);
-
+router.use(protect);
+router.post('/', rateLimit('uploads-user', 20, 3600000, userKey), resumeMutation, (req, res, next) => upload.single('resume')(req, res, error => next(error && !(error instanceof HttpError) && error.name !== 'MulterError' ? new HttpError(400, 'INVALID_UPLOAD', 'Invalid multipart upload.') : error)), storeUpload, uploadResume);
+router.get('/', getResumes);
+router.get('/limits', getResumeLimits);
+router.get('/:id/versions/:version', (req, res, next) => /^[a-f0-9]{24}$/i.test(req.params.id) ? next() : next(new HttpError(400, 'INVALID_ID', 'Invalid record identifier.')), getResumeVersion);
+router.put('/:id/content', validateIdentifiers, resumeMutation, saveResumeContent);
+router.get('/:id/download', validateIdentifiers, downloadResume);
+router.get('/:id', validateIdentifiers, getResumeById);
+router.delete('/:id', validateIdentifiers, resumeMutation, deleteResume);
+router.put('/:id', validateIdentifiers, resumeMutation, updateResume);
 export default router;
-

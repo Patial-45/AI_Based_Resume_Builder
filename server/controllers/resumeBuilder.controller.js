@@ -1,8 +1,9 @@
+import { HttpError } from '../middleware/errors.js';
 import { generateATSResume, analyzeResumeForJob, improveResumeSection } from '../services/resumeBuilder.js';
 import Resume from '../models/Resume.js';
 import JobDescription from '../models/JobDescription.js';
 
-export const generateResume = async (req, res) => {
+export const generateResume = async (req, res, next) => {
   try {
     const { jobDescriptionId, jdText, userInfo, existingResumeId } = req.body;
 
@@ -26,13 +27,13 @@ export const generateResume = async (req, res) => {
 
     let existingResume = null;
     if (existingResumeId) {
-      const resume = await Resume.findOne({
+      const resume = await Resume.findOne({ isActive: true,
         _id: existingResumeId,
         userId: req.user._id
       });
-      if (resume) {
-        existingResume = resume.extractedText;
-      }
+      if (!resume) throw new HttpError(404, 'NOT_FOUND', 'Resume not found.');
+      if (resume.reviewStatus !== 'ready') throw new HttpError(409, 'REVIEW_REQUIRED', 'Review and save this resume in your library first.');
+      existingResume = resume.extractedText;
     }
 
     const atsResume = await generateATSResume(
@@ -43,14 +44,12 @@ export const generateResume = async (req, res) => {
 
     res.json(atsResume);
   } catch (error) {
-    console.error('Error generating resume:', error);
-    res.status(500).json({ 
-      message: error.message || 'Failed to generate resume' 
-    });
+    /* Provider payloads and account data must not be logged. */
+    next(error);
   }
 };
 
-export const analyzeResume = async (req, res) => {
+export const analyzeResume = async (req, res, next) => {
   try {
     const { resumeId, jobDescriptionId, jdText } = req.body;
 
@@ -58,7 +57,7 @@ export const analyzeResume = async (req, res) => {
       return res.status(400).json({ message: 'Resume ID is required' });
     }
 
-    const resume = await Resume.findOne({
+    const resume = await Resume.findOne({ isActive: true,
       _id: resumeId,
       userId: req.user._id
     });
@@ -66,6 +65,7 @@ export const analyzeResume = async (req, res) => {
     if (!resume) {
       return res.status(404).json({ message: 'Resume not found' });
     }
+    if (resume.reviewStatus !== 'ready') throw new HttpError(409, 'REVIEW_REQUIRED', 'Open this resume in your library and save reviewed content before using it for analysis.');
 
     let jobDescription = '';
     if (jobDescriptionId) {
@@ -91,14 +91,12 @@ export const analyzeResume = async (req, res) => {
 
     res.json(analysis);
   } catch (error) {
-    console.error('Error analyzing resume:', error);
-    res.status(500).json({ 
-      message: error.message || 'Failed to analyze resume' 
-    });
+    /* Provider payloads and account data must not be logged. */
+    next(error);
   }
 };
 
-export const improveSection = async (req, res) => {
+export const improveSection = async (req, res, next) => {
   try {
     const { sectionName, currentContent, jobDescriptionId, jdText, suggestions } = req.body;
 
@@ -126,22 +124,12 @@ export const improveSection = async (req, res) => {
       suggestions || []
     );
 
-    res.json({ 
+    res.json({
       improvedContent,
-      sectionName 
+      sectionName
     });
   } catch (error) {
-    console.error('Error improving section:', error);
-    res.status(500).json({ 
-      message: error.message || 'Failed to improve section' 
-    });
+    /* Provider payloads and account data must not be logged. */
+    next(error);
   }
 };
-
-
-
-
-
-
-
-

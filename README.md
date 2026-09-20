@@ -1,254 +1,99 @@
-# Resume Builder - AI-Powered Job Matching Platform
+# Resume Builder
 
-A comprehensive MERN stack application that helps job seekers match their resumes with job descriptions using AI, get improvement suggestions, and discover relevant jobs across multiple job portals.
+A React/TypeScript, Express and MongoDB workspace for resumes, job matching, resume generation, job discovery and application tracking.
 
-## Features
+**Development — not ready for public launch.** Modules 1 and 2 are implemented locally, including the approved beige/teal design and resume library/review workflow; staging proof and final acceptance remain open. See [Module 2 verification](docs/m2/Verification.md) and [runbook](docs/m2/Runbook.md). Every current feature remains required for release. The owner-confirmed launch target is October 15, 2026; the original September 13 target elapsed. Modules 2–6 have not been accepted. [Work tracker](Work_Tracker.md) · [Module 1 results](docs/m1/Verification.md) · [Module 1 runbook](docs/m1/Runbook.md).
 
-### 🎯 Core Features
-- **Resume Upload & Parsing**: Upload PDF/DOCX resumes with automatic text extraction and section parsing
-- **AI-Powered Matching**: Get match scores (0-100) comparing your resume with job descriptions
-- **Score Breakdown**: Detailed analysis including:
-  - Semantic Match (experience alignment)
-  - Keyword Match (skill coverage)
-  - Role Alignment (career progression fit)
-- **Keyword Suggestions**: Get AI-powered recommendations for missing keywords to improve your resume
-- **Job Portal Scanning**: Automatically scan multiple job portals (Indeed, Glassdoor, etc.) using AI
-- **Job Recommendations**: Get personalized job recommendations based on your resume
-- **Match History**: Track all your resume matches with job descriptions
+## Start locally
 
-### 🔧 Tech Stack
-- **Frontend**: React 19 + TypeScript + Vite + Tailwind CSS
-- **Backend**: Node.js + Express.js
-- **Database**: MongoDB with Mongoose
-- **AI Integration**: 
-  - OpenAI (GPT-4) for resume matching and keyword suggestions
-  - Groq (Llama 3.1) for job portal scanning and search optimization
-- **File Processing**: PDF parsing, DOCX parsing
-- **Authentication**: JWT-based authentication
+Use a patched Node 22 release (minimum 22.12) and a development MongoDB. From the repository root:
 
-## Prerequisites
-
-- Node.js (v18 or higher)
-- MongoDB (local installation or MongoDB Atlas)
-- OpenAI API Key
-- Groq API Key
-
-## Installation
-
-### 1. Clone the repository
-```bash
-git clone <repository-url>
-cd "Resume Builder"
+```powershell
+npm ci --prefix server
+npm ci --prefix client
+if (-not (Test-Path server/.env)) { Copy-Item server/.env.example server/.env }
 ```
 
-### 2. Install Server Dependencies
-```bash
-cd server
-npm install
+Set MONGODB_URI and a random JWT_SECRET in server/.env. Generate the secret locally with:
+
+```powershell
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-### 3. Install Client Dependencies
-```bash
-cd ../client
-npm install
+The legacy JWT_SECRET name now identifies an HMAC secret for opaque sessions and recovery codes. Keep it private. AI keys are optional for identity and uploads. Do not place secrets in VITE_* variables.
+
+Run separate terminals:
+
+```powershell
+npm run dev --prefix server
 ```
 
-### 4. Environment Setup
-
-#### Server Environment Variables
-Create `server/.env` file:
-```env
-PORT=5000
-NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/resume-builder
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-OPENAI_API_KEY=your-openai-api-key
-GROQ_API_KEY=your-groq-api-key
-MAX_FILE_SIZE=5242880
-UPLOAD_PATH=./uploads
-CLIENT_URL=http://localhost:5173
+```powershell
+npm run dev --prefix client
 ```
 
-#### Client Environment Variables
-Create `client/.env` file:
-```env
-VITE_API_URL=http://localhost:5000/api
+Open http://localhost:5173. Vite proxies /api to localhost:5000. The server validates configuration, connects to the specified MongoDB, initializes identity/quota indexes, and only then listens. It never falls back to a second database.
+
+## Module 1 behavior
+
+- Register/login, server-validated reload, profile/preferences, password changes, logout and one-time recovery codes.
+- Opaque HttpOnly cookies replace localStorage JWTs. Production cookies are Secure, host-only and SameSite=Strict. Mutations require an in-memory CSRF token. Existing users must sign in again.
+- Generate a recovery code in Settings using your password and save it privately. A replacement invalidates the old code; using a code revokes every session.
+- Shared navigation, authentication screens, settings, accessible input labels, native modal focus handling and reduced-motion support.
+- Private owner-checked downloads; protected resume fields cannot be changed through the API. Upload accepts verified PDF/DOCX/UTF-8 TXT, max 5 MiB. Legacy DOC and generic binary MIME are rejected. Parse failures are explicit.
+- MongoDB-backed rate and AI concurrency limits, lazy provider initialization, redacted operational errors, independent liveness/readiness.
+- **Job scanning temporarily returns 503** while the unsafe scanner is contained. Real job discovery is still required in M5. Existing job activity APIs remain.
+- M2 production persistence/backup validation, honest matching/history (M3), factual editable drafts/export (M4), and real discovery/activity (M5) still have audit blockers. Some existing provider fallbacks remain unsafe to release.
+
+## Checks
+
+```powershell
+npm test --prefix server
+npm run lint --prefix client
+npm run build --prefix client
+npm audit --prefix server
+npm audit --prefix client
+npm exec --prefix client -- playwright install chromium
+npm run test:e2e --prefix client
 ```
 
-### 5. Create Upload Directory
-```bash
-mkdir server/uploads
-```
+Server tests use an isolated temporary MongoDB and synthetic files. Browser tests start isolated servers on ports 5081 and 5178; they do not use project credentials. First runs download test runtimes. See [the runbook](docs/m1/Runbook.md) for prerequisites. CI is defined in .github/workflows/ci.yml; remote CI/deployed results are not implied by local success.
 
-## Running the Application
+The old docs/audit/reproduce.mjs script asserts audited defects, not acceptance behavior. It is retained as historical evidence.
 
-### Start MongoDB
-Make sure MongoDB is running on your system:
-```bash
-# If using local MongoDB
-mongod
+## API
 
-# Or use MongoDB Atlas connection string in .env
-```
+All business routes require the session cookie. Unsafe methods also require X-CSRF-Token, returned by register/login/profile and password-change responses. Registration/login/recovery are public and rate limited. No Bearer-token compatibility remains.
 
-### Start the Server
-```bash
-cd server
-npm run dev
-```
-Server will run on `http://localhost:5000`
+| Group | Endpoints |
+|---|---|
+| Identity | POST /api/auth/register, /login, /logout, /recover, /recovery-code; GET/PUT /api/auth/profile; PUT /api/auth/password |
+| Resumes | POST/GET /api/resumes; GET/PUT/DELETE /api/resumes/:id; GET /api/resumes/:id/download. Multipart field: resume. PUT currently permits fileName only. |
+| Matching | POST/GET /api/match; GET /api/match/:id; GET /api/match/suggestions/:matchId |
+| Builder | POST /api/resume-builder/generate, /analyze, /improve-section |
+| Jobs | POST /api/jobs/scan (contained); GET /api/jobs/recommended, /saved, /:id; POST /api/jobs/:id/save, /apply, /ignore |
+| Operations | GET /api/health; GET /api/ready |
 
-### Start the Client
-```bash
-cd client
-npm run dev
-```
-Client will run on `http://localhost:5173`
+The public /uploads mount and /api/auth/test diagnostics are removed. New originals and bounded review versions are stored atomically in private MongoDB Resume documents. Legacy originals still require their existing private upload volume until explicitly migrated.
 
-## Project Structure
+## Deployment
 
-```
-Resume Builder/
-├── client/                 # React frontend
-│   ├── src/
-│   │   ├── components/     # Reusable components
-│   │   ├── pages/         # Page components
-│   │   ├── context/        # React context (Auth)
-│   │   ├── services/       # API services
-│   │   └── App.tsx         # Main app component
-│   └── package.json
-│
-├── server/                 # Express backend
-│   ├── config/            # Configuration files
-│   ├── controllers/       # Route controllers
-│   ├── models/            # MongoDB models
-│   ├── routes/            # Express routes
-│   ├── services/          # Business logic
-│   │   ├── aiService.js   # AI integration
-│   │   ├── jobScraper.js  # Job portal scraping
-│   │   └── resumeParser.js # Resume parsing
-│   ├── middleware/        # Express middleware
-│   ├── uploads/          # Uploaded resume files
-│   └── server.js          # Server entry point
-│
-└── README.md
-```
+The selected path is Vercel for the frontend, a separate container API, managed MongoDB and private storage; M5 adds the isolated job worker. No account, domain or public deployment has been created. Provision a staging API before generating Vercel routing with scripts/configure-vercel.mjs. See [Deployment.md](Deployment.md) and the [Module 1 runbook](docs/m1/Runbook.md). Never substitute local fixture tests or an untested routing config for deployed storage/cookie/isolation checks.
 
-## API Endpoints
+## Documents
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `GET /api/auth/profile` - Get user profile
-- `PUT /api/auth/profile` - Update user profile
+| Document | Purpose |
+|---|---|
+| [Audit.md](Audit.md) | Original source-backed bugs, security and architecture review |
+| [PRD.md](PRD.md) | Requirements and all-feature launch scope |
+| [Architecture.md](Architecture.md) | Current foundation and intended platform boundaries |
+| [Database_Schema.md](Database_Schema.md) | Models, indexes, changes and migration safeguards |
+| [Design.md](Design.md) | Typography, layout, motion and UI specification |
+| [Workflow.md](Workflow.md) | User journeys and sequential acceptance process |
+| [Modules.md](Modules.md) | Build, test and accept one module before the next |
+| [Test_Cases.md](Test_Cases.md) | Project-wide acceptance matrix |
+| [Work_Tracker.md](Work_Tracker.md) | Living work tracker, evidence and open gates |
+| [Deployment.md](Deployment.md) | Vercel-first launch plan |
+| [Audit verification](docs/audit/Verification.md) | Historical audit evidence and limitations |
 
-### Resumes
-- `POST /api/resumes` - Upload resume (multipart/form-data)
-- `GET /api/resumes` - Get all user resumes
-- `GET /api/resumes/:id` - Get resume by ID
-- `DELETE /api/resumes/:id` - Delete resume
-
-### Matching
-- `POST /api/match` - Match resume with job description
-- `GET /api/match` - Get all matches
-- `GET /api/match/:id` - Get match by ID
-- `GET /api/match/suggestions/:matchId` - Get keyword suggestions
-
-### Jobs
-- `POST /api/jobs/scan` - Scan job portals
-- `GET /api/jobs/recommended` - Get recommended jobs
-- `GET /api/jobs/:id` - Get job by ID
-- `POST /api/jobs/:id/save` - Save job
-- `POST /api/jobs/:id/apply` - Mark job as applied
-- `POST /api/jobs/:id/ignore` - Ignore job
-
-## Usage Guide
-
-### 1. Register/Login
-- Create an account or login with existing credentials
-
-### 2. Upload Resume
-- Navigate to "Upload" page
-- Select a PDF or DOCX file
-- System will automatically parse and extract text
-
-### 3. Match Resume
-- Go to "Match" page
-- Select your resume
-- Paste or enter job description
-- Click "Get Match Score" to get:
-  - Overall match score
-  - Detailed breakdown
-  - Missing keywords
-  - Improvement suggestions
-
-### 4. Find Jobs
-- Go to "Jobs" page
-- Select your resume
-- Click "Scan Job Portals"
-- System will scan job portals and show relevant jobs with match scores
-
-### 5. View History
-- Check "History" page to see all your previous matches
-
-## AI Integration Details
-
-### OpenAI (GPT-4)
-- **Resume Matching**: Analyzes resume vs job description
-- **Keyword Suggestions**: Identifies missing keywords
-- **Embeddings**: Generates text embeddings for semantic matching
-
-### Groq (Llama 3.1)
-- **Job Search Optimization**: Generates optimal search queries
-- **Job Portal Scanning**: Helps identify relevant jobs across portals
-
-## Security Features
-- JWT-based authentication
-- Password hashing with bcrypt
-- File upload validation
-- CORS configuration
-- Rate limiting (can be added)
-
-## Future Enhancements
-- [ ] Resume templates
-- [ ] Resume builder
-- [ ] Email notifications for new jobs
-- [ ] Advanced analytics dashboard
-- [ ] Multi-language support
-- [ ] Resume versioning
-- [ ] Export match reports
-- [ ] Integration with more job portals
-- [ ] Chrome extension for job application tracking
-
-## Troubleshooting
-
-### MongoDB Connection Issues
-- Ensure MongoDB is running
-- Check MONGODB_URI in .env file
-- Verify network connectivity
-
-### File Upload Issues
-- Check file size (max 5MB)
-- Ensure file is PDF or DOCX format
-- Verify uploads directory exists
-
-### AI API Issues
-- Verify API keys are correct
-- Check API quota/limits
-- Ensure internet connectivity
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.
-
-## Support
-
-For issues and questions, please open an issue on the repository.
-
+Earlier records are preserved in test_records.md, UI_UX_IMPROVEMENTS.md, TROUBLESHOOTING.md and [the archived README](docs/audit/README-before-audit.md). They are historical, not current acceptance claims.

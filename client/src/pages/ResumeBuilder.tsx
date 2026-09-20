@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { api, errorMessage } from '../services/api';
 import { FiFileText, FiZap, FiDownload } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { Card, CardBody } from '../components/ui/Card';
@@ -77,7 +77,7 @@ const ResumeBuilder = () => {
         api.get('/match').then(res => {
           // Extract unique job descriptions from matches
           const jds = new Map();
-          res.data.forEach((match: any) => {
+          res.data.forEach((match: { jobDescriptionId?: JobDescription }) => {
             if (match.jobDescriptionId && !jds.has(match.jobDescriptionId._id)) {
               jds.set(match.jobDescriptionId._id, match.jobDescriptionId);
             }
@@ -86,7 +86,7 @@ const ResumeBuilder = () => {
         }).catch(() => []),
         api.get('/auth/profile')
       ]);
-      
+
       setResumes(resumesRes.data);
       setJobDescriptions(jdsRes);
       if (profileRes.data) {
@@ -97,7 +97,7 @@ const ResumeBuilder = () => {
           location: profileRes.data.preferences?.location || ''
         });
       }
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to load data');
     } finally {
       setLoadingData(false);
@@ -118,11 +118,11 @@ const ResumeBuilder = () => {
         userInfo,
         existingResumeId: selectedResume || undefined
       });
-      
+
       setGeneratedResume(response.data);
       toast.success('ATS-friendly resume generated successfully!');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to generate resume');
+    } catch (error) {
+      toast.error(errorMessage(error, 'Failed to generate resume'));
     } finally {
       setLoading(false);
     }
@@ -133,7 +133,7 @@ const ResumeBuilder = () => {
 
     // Convert generated resume to text format for saving
     let resumeText = `PROFESSIONAL SUMMARY\n${generatedResume.summary}\n\n`;
-    
+
     resumeText += `PROFESSIONAL EXPERIENCE\n`;
     generatedResume.experience.forEach(exp => {
       resumeText += `${exp.title} | ${exp.company} | ${exp.duration}\n`;
@@ -422,4 +422,3 @@ const ResumeBuilder = () => {
 };
 
 export default ResumeBuilder;
-

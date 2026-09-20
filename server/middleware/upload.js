@@ -1,45 +1,34 @@
 import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+import { validateDocx } from '../services/validateDocx.js';
+import path from 'node:path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['application/pdf', 'application/msword', 
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-  
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Invalid file type. Only PDF and DOCX files are allowed.'), false);
-  }
+import { HttpError, asyncHandler } from './errors.js';
+const types = {
+  '.pdf': 'application/pdf',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.txt': 'text/plain'
 };
-
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024 // 5MB default
-  },
-  fileFilter: fileFilter
+export default multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 0, parts: 2 },
+  fileFilter(req, file, done) {
+    const type = types[path.extname(file.originalname).toLowerCase()];
+    done(type && type === file.mimetype ? null : new HttpError(415, 'INVALID_FILE_TYPE', 'Upload a PDF, DOCX, or plain text file.'), !!type && type === file.mimetype);
+  }
 });
-
-export default upload;
-
+export const storeUpload = asyncHandler(async (req, res, next) => {
+  if (!req.file) throw new HttpError(400, 'FILE_REQUIRED', 'Please upload a file.');
+  const file = req.file, data = file.buffer, ext = path.extname(file.originalname).toLowerCase();
+  if (data.length > req.app.locals.config.maxFileSize) throw new HttpError(413, 'FILE_TOO_LARGE', 'File is too large.');
+  if (!data.length || (ext === '.pdf' && data.subarray(0, 5).toString() !== '%PDF-') ||
+      (ext === '.docx' && (data.length < 4 || data.readUInt32LE(0) !== 0x04034b50))) throw new HttpError(422, 'INVALID_DOCUMENT', 'The document content does not match its type.');
+  if (ext === '.txt') {
+    let content;
+    try { content = new TextDecoder('utf-8', { fatal: true }).decode(data); }
+    catch { throw new HttpError(422, 'INVALID_TEXT', 'Use a UTF-8 text file.'); }
+    if (content.includes('\0') || /<\s*(?:!doctype|html|script|svg)\b/i.test(content)) throw new HttpError(422, 'INVALID_TEXT', 'Upload plain resume text.');
+  }
+  if (ext === '.docx') await validateDocx(data);
+  next();
+});

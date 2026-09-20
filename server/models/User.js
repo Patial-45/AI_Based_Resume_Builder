@@ -21,6 +21,8 @@ const userSchema = new mongoose.Schema({
     minlength: 6,
     select: false
   },
+  authVersion: { type: Number, default: 0 },
+  recoveryHash: { type: String, select: false },
   avatar: {
     type: String,
     default: null
@@ -33,7 +35,7 @@ const userSchema = new mongoose.Schema({
     maxSalary: Number
   }
 }, {
-  timestamps: true
+  timestamps: true, optimisticConcurrency: true
 });
 
 // Hash password before saving
@@ -51,4 +53,3 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 const User = mongoose.model('User', userSchema);
 
 export default User;
-

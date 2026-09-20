@@ -1,126 +1,61 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-
-import { authAPI } from '../services/api';
-import toast from 'react-hot-toast';
-
-interface User {
-  _id: string;
-  name: string;
-  email: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  token: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
-  loading: boolean;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import axios from 'axios';
+import { authAPI, setCsrfToken } from '../services/api';
+import { AuthContext, type User } from './auth';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const revision = useRef(0);
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      authAPI.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-    }
-    setLoading(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const accept = (data: User & { csrfToken: string }) => {
+    const { csrfToken, ...account } = data;
+    setCsrfToken(csrfToken);
+    setUser(account);
+    setSessionError(null);
+  };
+  const refresh = useCallback(async () => {
+    const requestRevision = ++revision.current;
+    setLoading(true);
+    try { const response = await authAPI.get('/auth/profile', { timeout: 10000 }); if (requestRevision === revision.current) accept(response.data); }
+    catch (error) {
+      if (requestRevision !== revision.current) return;
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        setUser(null); setCsrfToken(null); setSessionError(null);
+      } else setSessionError('We could not check your session. Check your connection and retry.');
+    } finally { if (requestRevision === revision.current) setLoading(false); }
   }, []);
-
+  useEffect(() => {
+    // Retire the legacy credential cache without parsing untrusted stored JSON.
+    try { localStorage.removeItem('token'); localStorage.removeItem('user'); } catch { /* Storage may be disabled. */ }
+    void refresh();
+    const expired = () => { revision.current++; setLoading(false); setSessionError(null); setUser(null); setCsrfToken(null); };
+    window.addEventListener('session-expired', expired);
+    const channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('account-session');
+    if (channel) channel.onmessage = () => { void refresh(); };
+    return () => { window.removeEventListener('session-expired', expired); channel?.close(); };
+  }, [refresh]);
+  const notifyTabs = () => {
+    if (typeof BroadcastChannel !== 'undefined') {
+      const channel = new BroadcastChannel('account-session');
+      channel.postMessage('changed'); channel.close();
+    }
+  };
   const login = async (email: string, password: string) => {
-    try {
-      const response = await authAPI.post('/auth/login', { email, password });
-      const { token, ...userData } = response.data;
-
-      setToken(token);
-      setUser(userData);
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      authAPI.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-      toast.success('Login successful!');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Login failed');
-      throw error;
-    }
+    revision.current++;
+    try { accept((await authAPI.post('/auth/login', { email, password }, { timeout: 20000 })).data); notifyTabs(); }
+    finally { setLoading(false); }
   };
-
   const register = async (name: string, email: string, password: string) => {
-    try {
-      console.log('Attempting registration:', { name, email, hasPassword: !!password });
-      const response = await authAPI.post('/auth/register', { name, email, password });
-      console.log('Registration response:', response.data);
-      
-      const { token, ...userData } = response.data;
-
-      if (!token) {
-        throw new Error('No token received from server');
-      }
-
-      setToken(token);
-      setUser(userData);
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      authAPI.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-      toast.success('Registration successful!');
-    } catch (error: any) {
-      console.error('Registration error:', error);
-      console.error('Error response:', error.response);
-      console.error('Error message:', error.message);
-      
-      let errorMessage = 'Registration failed';
-      
-      if (error.response) {
-        // Server responded with error
-        errorMessage = error.response.data?.message || error.response.data?.error || `Server error: ${error.response.status}`;
-        console.error('Server error details:', error.response.data);
-      } else if (error.request) {
-        // Request made but no response
-        errorMessage = 'No response from server. Please check if the server is running.';
-        console.error('No response received:', error.request);
-      } else {
-        // Error setting up request
-        errorMessage = error.message || 'Failed to send request';
-        console.error('Request setup error:', error.message);
-      }
-      
-      toast.error(errorMessage);
-      throw error;
-    }
+    revision.current++;
+    try { accept((await authAPI.post('/auth/register', { name, email, password }, { timeout: 20000 })).data); notifyTabs(); }
+    finally { setLoading(false); }
   };
-
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    delete authAPI.defaults.headers.common['Authorization'];
-    toast.success('Logged out successfully');
+  const logout = async () => {
+    try { await authAPI.post('/auth/logout'); }
+    catch (error) { if (!axios.isAxiosError(error) || error.response?.status !== 401) throw error; }
+    window.dispatchEvent(new Event('session-logout'));
+    revision.current++; setLoading(false); setUser(null); setCsrfToken(null); notifyTabs();
   };
-
-  return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, loading, sessionError, refresh, setUser, login, register, logout }}>{children}</AuthContext.Provider>;
 };
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-

@@ -2,10 +2,10 @@ import Resume from '../models/Resume.js';
 import Job from '../models/Job.js';
 import JobMatch from '../models/JobMatch.js';
 import User from '../models/User.js';
-import { scanJobPortals } from '../services/jobScraper.js';
+import { scanJobPortals, generateSampleJobs } from '../services/jobScraper.js';
 import { cosineSimilarity } from '../services/aiService.js';
 
-export const scanJobs = async (req, res) => {
+export const scanJobs = async (req, res, next) => {
   try {
     const { resumeId } = req.body;
 
@@ -13,7 +13,7 @@ export const scanJobs = async (req, res) => {
       return res.status(400).json({ message: 'Resume ID is required' });
     }
 
-    const resume = await Resume.findOne({
+    const resume = await Resume.findOne({ isActive: true,
       _id: resumeId,
       userId: req.user._id
     });
@@ -25,98 +25,96 @@ export const scanJobs = async (req, res) => {
     const user = await User.findById(req.user._id);
     const userPreferences = user.preferences || {};
 
-    // Scan job portals
-    let jobs = [];
+    // Step 1: Check MongoDB for active jobs created within the last 3 days (72 hours)
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    const recentCachedJobs = await Job.find({
+      createdAt: { $gte: threeDaysAgo },
+      isActive: true
+    }).sort({ createdAt: -1 }).limit(150);
+
+
+    /* Provider payloads and account data must not be logged. */
+
+    // Step 2: Perform live real-time India portal scanning
+    let liveJobs = [];
     try {
-      jobs = await scanJobPortals(
+      liveJobs = await scanJobPortals(
         resume.extractedText,
         resume.sections || {},
         userPreferences
       );
     } catch (error) {
-      console.error('Error scanning job portals:', error);
-      return res.status(500).json({ 
-        message: 'Failed to scan job portals. This might be due to website blocking or API issues.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
+      /* Provider payloads and account data must not be logged. */
+      liveJobs = [];
     }
 
-    if (jobs.length === 0) {
-      // Try to get any existing jobs from database as fallback
-      const existingJobs = await Job.find({ isActive: true })
-        .sort({ postedDate: -1 })
-        .limit(20);
-      
-      if (existingJobs.length > 0) {
-        console.log(`Returning ${existingJobs.length} existing jobs from database`);
-        // Calculate match scores for existing jobs
-        const jobMatches = [];
-        for (const job of existingJobs) {
-          try {
-            let matchScore = 50;
-            if (resume.embedding && job.embedding && 
-                Array.isArray(resume.embedding) && Array.isArray(job.embedding)) {
-              try {
-                const similarity = cosineSimilarity(resume.embedding, job.embedding);
-                matchScore = Math.round(similarity * 100);
-              } catch (error) {
-                console.warn('Error calculating similarity:', error.message);
-              }
-            }
-            
-            let jobMatch = await JobMatch.findOne({
-              userId: req.user._id,
-              jobId: job._id
-            });
-            
-            if (!jobMatch) {
-              jobMatch = await JobMatch.create({
-                userId: req.user._id,
-                resumeId: resume._id,
-                jobId: job._id,
-                matchScore
-              });
-            }
-            
-            jobMatches.push({ job, match: jobMatch });
-          } catch (error) {
-            console.error('Error processing existing job:', error);
-          }
-        }
-        
-        return res.json({
-          message: `Found ${jobMatches.length} jobs from database`,
-          jobs: jobMatches.sort((a, b) => b.match.matchScore - a.match.matchScore),
-          note: 'These are previously scraped jobs. New job scraping may have failed due to website changes.'
-        });
+    // Step 3: Combine 3-day cached jobs with live scraped jobs (de-duplicating by ID/URL)
+    const combinedJobMap = new Map();
+
+    for (const job of [...liveJobs, ...recentCachedJobs]) {
+      const key = job._id ? job._id.toString() : job.sourceUrl;
+      if (!combinedJobMap.has(key)) {
+        combinedJobMap.set(key, job);
       }
-      
-      return res.status(404).json({ 
-        message: 'No jobs found. Job scraping may have failed due to website structure changes or rate limiting. Sample jobs have been generated based on your resume.',
-        jobs: []
-      });
     }
 
-    // Calculate match scores for each job
+    let jobs = Array.from(combinedJobMap.values());
+
+    if (!jobs || jobs.length === 0) {
+      /* Provider payloads and account data must not be logged. */
+      jobs = await generateSampleJobs(
+        resume.extractedText,
+        resume.sections || {},
+        userPreferences
+      );
+    }
+
+    // Step 4: Calculate match scores for each job against this specific resume
     const jobMatches = [];
-    for (const job of jobs) {
+    for (const rawJob of jobs) {
       try {
+        let job = rawJob;
+
+        // Ensure job is saved in MongoDB so job._id is guaranteed to exist
+        if (!job._id) {
+          const sourceUrl = job.sourceUrl || job.link || `https://india-jobs.com/job/${encodeURIComponent((job.title || 'job').toLowerCase().replace(/\s+/g, '-'))}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          let existingJob = await Job.findOne({ sourceUrl });
+          if (!existingJob) {
+            existingJob = await Job.create({
+              title: job.title || 'Software Developer',
+              company: job.company || 'Tech Employer',
+              location: job.location || 'India',
+              country: 'India',
+              remote: (job.location || '').toLowerCase().includes('remote'),
+              source: job.source || 'sample',
+              sourceUrl,
+              description: job.description || job.snippet || `${job.title} position in India.`,
+              extractedText: job.description || job.snippet || '',
+              keywords: job.keywords || [],
+              requirements: job.requirements || [],
+              postedDate: new Date()
+            });
+          }
+          job = existingJob;
+        }
+
+        if (!job || !job._id) continue;
+
         let matchScore = 50; // Default score
-        
-        // Try to calculate similarity if embeddings exist
-        if (resume.embedding && job.embedding && 
+
+        // Calculate semantic similarity using embeddings
+        if (resume.embedding && job.embedding &&
             Array.isArray(resume.embedding) && Array.isArray(job.embedding) &&
             resume.embedding.length > 0 && job.embedding.length > 0) {
           try {
             const similarity = cosineSimilarity(resume.embedding, job.embedding);
             matchScore = Math.round(similarity * 100);
           } catch (error) {
-            console.warn('Error calculating similarity for job:', error.message);
-            // Use default score
+            /* Provider payloads and account data must not be logged. */
           }
         }
 
-        // Create or update job match
+        // Create or update job match record
         let jobMatch = await JobMatch.findOne({
           userId: req.user._id,
           jobId: job._id
@@ -130,6 +128,7 @@ export const scanJobs = async (req, res) => {
             matchScore
           });
         } else {
+          jobMatch.resumeId = resume._id;
           jobMatch.matchScore = matchScore;
           await jobMatch.save();
         }
@@ -139,22 +138,23 @@ export const scanJobs = async (req, res) => {
           match: jobMatch
         });
       } catch (error) {
-        console.error('Error processing job match:', error);
-        // Continue with other jobs
+        /* Provider payloads and account data must not be logged. */
       }
     }
 
+
     res.json({
-      message: `Found ${jobs.length} jobs`,
+      message: `Found ${jobMatches.length} matching active jobs for India`,
       jobs: jobMatches.sort((a, b) => b.match.matchScore - a.match.matchScore)
     });
   } catch (error) {
-    console.error('Error scanning jobs:', error);
-    res.status(500).json({ message: error.message });
+    /* Provider payloads and account data must not be logged. */
+    next(error);
   }
 };
 
-export const getRecommendedJobs = async (req, res) => {
+
+export const getRecommendedJobs = async (req, res, next) => {
   try {
     const { resumeId, limit = 20 } = req.query;
 
@@ -162,7 +162,7 @@ export const getRecommendedJobs = async (req, res) => {
       return res.status(400).json({ message: 'Resume ID is required' });
     }
 
-    const resume = await Resume.findOne({
+    const resume = await Resume.findOne({ isActive: true,
       _id: resumeId,
       userId: req.user._id
     });
@@ -183,11 +183,11 @@ export const getRecommendedJobs = async (req, res) => {
 
     res.json(jobMatches);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-export const getJobById = async (req, res) => {
+export const getJobById = async (req, res, next) => {
   try {
     const job = await Job.findById(req.params.id);
 
@@ -209,11 +209,11 @@ export const getJobById = async (req, res) => {
 
     res.json({ job, matchScore });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-export const saveJob = async (req, res) => {
+export const saveJob = async (req, res, next) => {
   try {
     const jobMatch = await JobMatch.findOneAndUpdate(
       {
@@ -231,11 +231,11 @@ export const saveJob = async (req, res) => {
 
     res.json(jobMatch);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-export const getSavedJobs = async (req, res) => {
+export const getSavedJobs = async (req, res, next) => {
   try {
     const savedJobs = await JobMatch.find({
       userId: req.user._id,
@@ -246,11 +246,11 @@ export const getSavedJobs = async (req, res) => {
 
     res.json(savedJobs);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-export const markJobAsApplied = async (req, res) => {
+export const markJobAsApplied = async (req, res, next) => {
   try {
     const jobMatch = await JobMatch.findOneAndUpdate(
       {
@@ -269,11 +269,11 @@ export const markJobAsApplied = async (req, res) => {
 
     res.json(jobMatch);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-export const ignoreJob = async (req, res) => {
+export const ignoreJob = async (req, res, next) => {
   try {
     const jobMatch = await JobMatch.findOneAndUpdate(
       {
@@ -291,7 +291,6 @@ export const ignoreJob = async (req, res) => {
 
     res.json({ message: 'Job ignored successfully' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
-

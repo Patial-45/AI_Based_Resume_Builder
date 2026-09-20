@@ -1,10 +1,11 @@
+import { HttpError } from '../middleware/errors.js';
 import Match from '../models/Match.js';
 import Resume from '../models/Resume.js';
 import JobDescription from '../models/JobDescription.js';
 import { matchResumeWithJD, generateKeywordSuggestions, getEmbedding, cosineSimilarity } from '../services/aiService.js';
 import { analyzeResumeForJob } from '../services/resumeBuilder.js';
 
-export const matchResumeWithJDController = async (req, res) => {
+export const matchResumeWithJDController = async (req, res, next) => {
   try {
     const { resumeId, jobDescriptionId, jdText, title, company } = req.body;
 
@@ -13,7 +14,7 @@ export const matchResumeWithJDController = async (req, res) => {
     }
 
     // Get resume
-    const resume = await Resume.findOne({
+    const resume = await Resume.findOne({ isActive: true,
       _id: resumeId,
       userId: req.user._id
     });
@@ -21,6 +22,7 @@ export const matchResumeWithJDController = async (req, res) => {
     if (!resume) {
       return res.status(404).json({ message: 'Resume not found' });
     }
+    if (resume.reviewStatus !== 'ready') throw new HttpError(409, 'REVIEW_REQUIRED', 'Open this resume in your library and save reviewed content before using it for analysis.');
 
     let jobDescription;
     let jdTextFinal = jdText;
@@ -41,10 +43,10 @@ export const matchResumeWithJDController = async (req, res) => {
       try {
         embedding = await getEmbedding(jdText);
       } catch (error) {
-        console.warn('Failed to generate embedding for job description:', error.message);
+        /* Provider payloads and account data must not be logged. */
         // Continue without embedding - it's not critical
       }
-      
+
       jobDescription = await JobDescription.create({
         userId: req.user._id,
         title: title || 'Untitled Job',
@@ -59,14 +61,14 @@ export const matchResumeWithJDController = async (req, res) => {
 
     // Calculate semantic similarity using embeddings
     let semanticScore = 0;
-    if (resume.embedding && jobDescription.embedding && 
+    if (resume.embedding && jobDescription.embedding &&
         Array.isArray(resume.embedding) && Array.isArray(jobDescription.embedding) &&
         resume.embedding.length > 0 && jobDescription.embedding.length > 0) {
       try {
         const similarity = cosineSimilarity(resume.embedding, jobDescription.embedding);
         semanticScore = Math.round(similarity * 100);
       } catch (error) {
-        console.warn('Error calculating cosine similarity:', error.message);
+        /* Provider payloads and account data must not be logged. */
         semanticScore = 0;
       }
     }
@@ -80,7 +82,7 @@ export const matchResumeWithJDController = async (req, res) => {
         resume.sections || {}
       );
     } catch (error) {
-      console.error('Error in AI matching:', error);
+      /* Provider payloads and account data must not be logged. */
       // Fallback to basic matching if AI fails
       aiMatchResult = {
         overallScore: semanticScore || 50,
@@ -114,7 +116,7 @@ export const matchResumeWithJDController = async (req, res) => {
         resume.sections || {}
       );
     } catch (error) {
-      console.warn('Failed to get detailed analysis, using basic match result:', error.message);
+      /* Provider payloads and account data must not be logged. */
       // Continue with basic match result
     }
 
@@ -155,14 +157,14 @@ export const matchResumeWithJDController = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error in match controller:', error);
-    res.status(500).json({ message: error.message });
+    /* Provider payloads and account data must not be logged. */
+    next(error);
   }
 };
 
-export const getMatches = async (req, res) => {
+export const getMatches = async (req, res, next) => {
   try {
-    const matches = await Match.find({ userId: req.user._id })
+    const matches = await Match.find({ userId: req.user._id, resumeId: { $in: await Resume.find({ userId: req.user._id, isActive: true }).distinct('_id') } })
       .populate('resumeId', 'fileName')
       .populate('jobDescriptionId', 'title company')
       .sort({ createdAt: -1 })
@@ -170,39 +172,39 @@ export const getMatches = async (req, res) => {
 
     res.json(matches);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-export const getMatchById = async (req, res) => {
+export const getMatchById = async (req, res, next) => {
   try {
     const match = await Match.findOne({
       _id: req.params.id,
       userId: req.user._id
     })
-      .populate('resumeId')
-      .populate('jobDescriptionId');
+      .populate({ path: 'resumeId', match: { userId: req.user._id, isActive: true }, select: '-embedding -filePath' })
+      .populate({ path: 'jobDescriptionId', match: { userId: req.user._id }, select: '-embedding' });
 
-    if (!match) {
+    if (!match || !match.resumeId || !match.jobDescriptionId) {
       return res.status(404).json({ message: 'Match not found' });
     }
 
     res.json(match);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-export const getKeywordSuggestions = async (req, res) => {
+export const getKeywordSuggestions = async (req, res, next) => {
   try {
     const match = await Match.findOne({
       _id: req.params.matchId,
       userId: req.user._id
     })
-      .populate('resumeId')
-      .populate('jobDescriptionId');
+      .populate({ path: 'resumeId', match: { userId: req.user._id, isActive: true }, select: '-embedding -filePath' })
+      .populate({ path: 'jobDescriptionId', match: { userId: req.user._id }, select: '-embedding' });
 
-    if (!match) {
+    if (!match || !match.resumeId || !match.jobDescriptionId) {
       return res.status(404).json({ message: 'Match not found' });
     }
 
@@ -213,7 +215,6 @@ export const getKeywordSuggestions = async (req, res) => {
 
     res.json({ suggestions, matchId: match._id });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
-
